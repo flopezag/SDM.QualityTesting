@@ -1,0 +1,39 @@
+
+<html>
+<head>
+</head>
+<body>
+  <h1>Results Page</h1>
+
+  <script>
+    // Get the query parameters from the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const repoUrl = urlParams.get('datamodelRepoUrl');
+    const email = urlParams.get('email');
+
+    // Call the check_schema function and display the output
+    function check_schema(repoUrl, email) {
+      var xmlhttp = new XMLHttpRequest();
+      xmlhttp.open("GET", "check_datamodel_test.php?datamodelRepoUrl=" + repoUrl + "&email=" + email, true);
+      xmlhttp.send();
+
+      xmlhttp.onload = function() {
+        if (xmlhttp.status === 200) {
+          document.getElementById("output").innerHTML = xmlhttp.responseText;
+        }
+      };
+    }
+
+    // Call the check_schema function initially
+    check_schema(repoUrl, email);
+
+    // Periodically update the PHP program every 2 seconds
+    setInterval(function() {
+      check_schema(repoUrl, email);
+    }, 2000);
+  </script>
+
+  <p>Output: <span id="output"></span></p>
+</body>
+</html>
+
