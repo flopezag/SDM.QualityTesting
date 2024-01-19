@@ -5,5 +5,10 @@
     "rotation": "20 days",
     "retention": "1 months",
     "format": "<level>{level: <8}</level> <green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> request id: {extra[request_id]} - <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>"
-  }
+  },
+  "meta_schema": "https://json-schema.org/draft/2020-12/meta/validation",
+  "timezone": "Europe/Madrid",
+  "full_check": true,
+  "test_number": 1,
+  "json_output_dir": "./mastercheck_output/"
 }

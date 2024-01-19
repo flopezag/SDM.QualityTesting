@@ -51,7 +51,8 @@ def is_property_already_existed(output, yamlDict):
             else:
                 output[available].append({key: "Available"})
 
-    except:
+    except Exception as e:
+        print(e)
         output[existing].append({"Error": lowKey})
     
     return output

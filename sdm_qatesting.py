@@ -22,6 +22,7 @@
 
 from cli.command import parse_cli
 from api.server import launch
+from common.config import CODE_HOME
 
 if __name__ == "__main__":
     args = parse_cli()

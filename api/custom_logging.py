@@ -26,6 +26,7 @@ import sys
 from pathlib import Path
 from loguru import logger
 from json import load
+from typing import Union
 
 
 class InterceptHandler(Handler):
@@ -55,16 +56,23 @@ class InterceptHandler(Handler):
 
 class CustomizeLogger:
     @classmethod
-    def make_logger(cls, config_path: Path):
-        config = cls.load_logging_config(config_path)
-        logging_config = config.get("logger")
+    def make_logger(cls, config_data: Union[Path, dict]):
+        if isinstance(config_data, Path):
+            config = cls.load_logging_config(config_data)
+            config_data = config.get("logger")
+        elif isinstance(config_data, dict):
+            config_data = config_data.get("logger")
+        else:
+            # Invalid data type
+            raise ValueError(f"ERROR: Invalid data type for config_data parameter."
+                             f" Expected <Path> or <dict> but received '{type(config_data)}'.")
 
         logger = cls.customize_logging(
-            filepath=logging_config.get("path"),
-            level=logging_config.get("level"),
-            retention=logging_config.get("retention"),
-            rotation=logging_config.get("rotation"),
-            format=logging_config.get("format"),
+            filepath=config_data.get("path"),
+            level=config_data.get("level"),
+            retention=config_data.get("retention"),
+            rotation=config_data.get("rotation"),
+            format=config_data.get("format"),
         )
 
         return logger
