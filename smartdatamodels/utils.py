@@ -1,14 +1,13 @@
-import jsonref
-import requests
-import re
-import datetime
-import json
-import yaml
-
-import jsonschema
-
+from json import load, dump, loads, JSONDecodeError
+from jsonref import loads as jsonref_loads
+from re import sub
+from requests import get
+from datetime import datetime, timezone
+from yaml import safe_load
+from common.config import CONFIG_DATA
 from validator_collection import checkers
 from jsonschema import validate, SchemaError, Draft202012Validator
+from jsonschema.exceptions import ValidationError
 
 propertyTypes = ["Property", "Relationship", "GeoProperty"]
 
@@ -49,7 +48,7 @@ def mf_test_start(json_output, tz):
 def mf_test_end(message):
     return (f"{message} \n"
             f"Please be reminded that the JSON output file will be temporarily stored FOR one hour. \n "
-            f"{''.join(['#']*30)}")
+            f"{''.join(['#']*30)}\n")
 
 
 def mf_test_basic(test_number, tz):
@@ -69,7 +68,7 @@ def mf_test_passed(test_number, tz, message):
 
 
 def mf_test_failed(test_number, tz, message):
-    return mf_test_basic(test_number, tz) + " failed!\n" + message + "\n"
+    return mf_test_basic(test_number, tz) + " failed!\n\n" + message + "\n"
 
 
 def mf_test_previous(test_number):
@@ -103,7 +102,7 @@ def write_msg_to_file(message, mail):
 
 def send_message(test_number, mail, tz, check_type, json_output=None, sub_test_name=""):
     """
-    Create the message given different tests, types, and subtestname
+    Create the message given different tests, types, and sub_test_name
 
     Parameters:
         test_number (int): the number of test, 1 - file structure check, 2 - schema.json check, 
@@ -139,10 +138,10 @@ def send_message(test_number, mail, tz, check_type, json_output=None, sub_test_n
         # generate the message contains the link to json output dictionary
         message += mf_test_json(json_output, test_number)
 
-    elif check_type == "processing": # the return message when processing sub-tests
+    elif check_type == "processing":  # the return message when processing sub-tests
         message = mf_test_processing(sub_test_name, tz)
 
-    elif check_type == "failed": # the return message when check failed
+    elif check_type == "failed":  # the return message when check failed
 
         if test_number == 2:
             # 2 - schema.json check 
@@ -151,7 +150,7 @@ def send_message(test_number, mail, tz, check_type, json_output=None, sub_test_n
             # 3 - examples check
             message = mf_test_failed(test_number, tz, json_output[test_number]["cause"])
 
-        message += mf_test_json(json_output, test_number)
+        message = f"{message}\n{mf_test_json(json_output, test_number)}"
 
     elif check_type == "start":  # the return message when check starts
         message = mf_test_start(json_output, tz)
@@ -168,7 +167,8 @@ def send_message(test_number, mail, tz, check_type, json_output=None, sub_test_n
     else:  # the return message when check ends
         message = mf_test_end(check_type)
 
-    write_msg_to_file(message, mail)
+    if CONFIG_DATA["generate_output_file"]:
+        write_msg_to_file(message, mail)
 
 
 def message_after_check_schema(output):
@@ -252,15 +252,20 @@ No big issue with the metadata in /examples.
     return message
 
 
-def message_after_check(output, testnumber, isParamCheck=False):
+def message_after_check(output: dict, test_number: int, is_param_check: bool = False) -> str:
     """
     Create return messages for parameters check, schema.json check
     """
-    if isParamCheck:
-        return output["cause"]
-    if testnumber == 2:
-        return message_after_check_schema(output)
-    return ""
+    message = str()
+
+    if is_param_check:
+        message = output["cause"]
+    elif test_number == 2:
+        message = message_after_check_schema(output)
+    else:
+        message = ""
+
+    return message
 
 
 ################################################
@@ -297,7 +302,7 @@ def create_output_json(test_number, data_model_repo_url, mail, tz, meta_schema):
         # if path exists already, which means the previous checks exist
         # get the previous check return
         output = read_output_json(json_output_filepath)
-        output['lastModifiedTime'] = get_now_verbose(tz)
+        output['lastModifiedTime'] = get_now_verbose(tz, '%Y-%m-%dT%H:%M:%S%z')
 
         send_message(test_number, mail, tz, check_type="start", json_output=output)
         send_message(test_number, mail, tz, check_type="previous", json_output=output)
@@ -310,8 +315,8 @@ def create_output_json(test_number, data_model_repo_url, mail, tz, meta_schema):
         output['mail'] = mail
         output['date'] = get_now(tz)
         output['repoUrl'] = data_model_repo_url
-        output['createdTime'] = get_now_verbose(tz)
-        output['lastModifiedTime'] = get_now_verbose(tz)
+        output['createdTime'] = get_now_verbose(tz, '%Y-%m-%dT%H:%M:%S%z')
+        output['lastModifiedTime'] = get_now_verbose(tz, '%Y-%m-%dT%H:%M:%S%z')
         output['metaschema'] = meta_schema
         output['message'] = ""
 
@@ -328,7 +333,7 @@ def read_output_json(json_output_filepath):
     Read the json output file
     """
     with open(json_output_filepath, 'r') as file:
-        output = json.load(file)
+        output = load(file)
     return output
 
 
@@ -337,55 +342,72 @@ def update_output_json(json_output_filepath, output):
     Write the json output dictionary to the file
     """
     with open(json_output_filepath, 'w') as file:
-        json.dump(output, file)
+        dump(output, file)
 
 
-def clean_test_data(json_output_filepath, test_number):
+def clean_test_data(json_output_filepath, test_number, logger):
     """
     Clean up the previous test and update in json output
     """
     output = read_output_json(json_output_filepath)
-    output.pop(str(test_number))
-    update_output_json(json_output_filepath, output)
+
+    try:
+        output.pop(str(test_number))
+        update_output_json(json_output_filepath, output)
+    except KeyError as e:
+        logger.warning(f"WARNING: The test_number {e} is not found in the output")
 
 
-def customized_json_dumps(output, tz, test_number, json_output_filepath, mail, flag=True, is_param_check=False):
+def customized_json_dumps(output: dict,
+                          tz: timezone,
+                          test_number: int,
+                          json_output_filepath: str,
+                          mail: str,
+                          generate_output_file: bool = False,
+                          flag: bool = True,
+                          is_param_check: bool = False):
     """
     Create the json output at the end of each check according to the status
 
     Parameters:
         output (dict): the json output of the specific check
-        tz: timezone
+        tz (timezone): timezone
         test_number (int): the number of test, 1 - file structure check, 2 - schema.json check,
                         3 - examples check, 4 - other files check
         json_output_filepath (str): the file path to json output
         mail (str): the mail of the user
+        generate_output_file (bool): whether we wanted to generate an output file with the content of the execution or
+        just show the content in the log content.
         flag (bool): whether check is passed or failed, True is passed and False is failed
         is_param_check (bool): whether check is parameters check or not
     """
     output["testnumber"] = test_number
     output["testname"] = TESTS[test_number - 1]
-    output["time"] = get_now_verbose(tz)
+    output["time"] = get_now_verbose(tz, '%Y-%m-%dT%H:%M:%S%z')
 
     # get the json output dictionary for all checks
     json_output = read_output_json(json_output_filepath)
-    output['jsonUrl'] = get_json_output_url(json_output, test_number)
+
+    if generate_output_file:
+        output['jsonUrl'] = get_json_output_url(json_output, test_number)
 
     # if the check is passed, update the "result" in json output to True
     if flag:
         output["result"] = flag
+
     output["message"] = message_after_check(output, test_number, is_param_check)
 
     # update the json output with the information of the specific check
     json_output[test_number] = output
-    json_output["lastModifiedTime"] = get_now_verbose(tz)
+    json_output["lastModifiedTime"] = get_now_verbose(tz, '%Y-%m-%dT%H:%M:%S%z')
     update_output_json(json_output_filepath, json_output)
 
     # create return message according to the status
-    if flag:
-        send_message(test_number, mail, tz, check_type="passed", json_output=json_output)
-    else:
-        send_message(test_number, mail, tz, check_type="failed", json_output=json_output)
+    if generate_output_file:
+        if flag:
+            send_message(test_number, mail, tz, check_type="passed", json_output=json_output)
+        else:
+            send_message(test_number, mail, tz, check_type="failed", json_output=json_output)
 
 
 def get_json_output_url(json_output, test_number):
@@ -408,9 +430,9 @@ def get_normalized_examples_url(file_path):
 ################################################
 # Time related, two formats now
 ################################################
-def get_now(tz, format="%m%d"):
-    now = datetime.datetime.now(tz=tz)
-    formatted_date = now.strftime(format)  # MMDD
+def get_now(tz, my_format="%m%d"):
+    now = datetime.now(tz=tz)
+    formatted_date = now.strftime(my_format)  # MMDD
     return formatted_date
 
 
@@ -451,19 +473,19 @@ def open_jsonref(file_url):
     TODO: import the function from python package by "from pysmartdatamodel.utils import *"
     """
     if file_url[0:4] == "http":
-        # es URL
+        # is a URL
         try:
-            pointer = requests.get(file_url)
-            output = jsonref.loads(pointer.content.decode('utf-8'), load_on_repr=False, merge_props=True)
+            pointer = get(file_url)
+            output = jsonref_loads(pointer.content.decode('utf-8'), load_on_repr=False, merge_props=True)
             return output
         except Exception as e:
             print(e)
             return ""
     else:
-        # es file
+        # is a file
         try:
             with open(file_url, "r") as file:
-                data = jsonref.loads(file.read())
+                data = jsonref_loads(file.read())
             return data
         except Exception as e:
             print(e)
@@ -485,7 +507,7 @@ def is_url_existed(url, message=""):
     """
     output = []
     try:
-        pointer = requests.get(url)
+        pointer = get(url)
         if pointer.status_code == 200:
             return [True, pointer.text]
         else:
@@ -635,7 +657,7 @@ def parse_description(schema_payload):
     output = {}
     purged_description = str(schema_payload["description"]).replace(chr(34), "")
     # process the description
-    purged_description = re.sub(r'\.([A-Z])', r'. \1', purged_description)
+    purged_description = sub(r'\.([A-Z])', r'. \1', purged_description)
 
     separated_description = purged_description. split(". ")
     copied_description = list.copy(separated_description)
@@ -705,13 +727,19 @@ def parse_payload_v2(schema_payload, level):
         if "oneOf" in schema_payload:
             for index in range(len(schema_payload["oneOf"])):
                 if "definitions" in schema_payload["oneOf"][index]:
-                    partial_output, partial_attr = parse_payload_v2(schema_payload["oneOf"][index]["definitions"], level + 1)
+                    partial_output, partial_attr = (
+                        parse_payload_v2(schema_payload["oneOf"][index]["definitions"], level + 1))
+
                     output = dict(output, **partial_output)
                 elif "properties" in schema_payload["oneOf"][index]:
-                    partial_output, partial_attr = parse_payload_v2(schema_payload["oneOf"][index], level + 1)
+                    partial_output, partial_attr = (
+                        parse_payload_v2(schema_payload["oneOf"][index], level + 1))
+
                     output = dict(output, **partial_output["properties"])
                 else:
-                    partial_output, partial_attr = parse_payload_v2(schema_payload["oneOf"][index], level + 1)
+                    partial_output, partial_attr = (
+                        parse_payload_v2(schema_payload["oneOf"][index], level + 1))
+
                     output = dict(output, **partial_output)
                 attributes = merge_duplicate_attributes(attributes, partial_attr)
 
@@ -726,10 +754,14 @@ def parse_payload_v2(schema_payload, level):
                     output[sub_schema] = []
                     for index in range(len(schema_payload[sub_schema])):
                         if "properties" in schema_payload[sub_schema][index]:
-                            partial_output, partial_attr = parse_payload_v2(schema_payload[sub_schema][index], level + 1)
+                            partial_output, partial_attr = (
+                                parse_payload_v2(schema_payload[sub_schema][index], level + 1))
+
                             output[sub_schema].append(partial_output["properties"])
                         else:
-                            partial_output, partial_attr = parse_payload_v2(schema_payload[sub_schema][index], level + 1)
+                            partial_output, partial_attr = (
+                                parse_payload_v2(schema_payload[sub_schema][index], level + 1))
+
                             output[sub_schema].append(partial_output)
                         attributes = merge_duplicate_attributes(attributes, partial_attr)
 
@@ -746,7 +778,9 @@ def parse_payload_v2(schema_payload, level):
                             if item in ["allOf", "anyOf", "oneOf"]:
                                 output[sub_schema][prop][item] = []
                                 for index in range(len(schema_payload[sub_schema][prop][item])):
-                                    partial_output, partial_attr = parse_payload_v2(schema_payload[sub_schema][prop][item][index], level + 1)
+                                    partial_output, partial_attr = (
+                                        parse_payload_v2(schema_payload[sub_schema][prop][item][index], level + 1))
+
                                     output[sub_schema][prop][item].append(partial_output)
                                     attributes = merge_duplicate_attributes(attributes, partial_attr)
                             elif item == "description":
@@ -757,10 +791,14 @@ def parse_payload_v2(schema_payload, level):
                                     output[sub_schema][prop]["x-ngsi"] = x_ngsi
 
                             elif item == "items":
-                                output[sub_schema][prop][item], partial_attr = parse_payload_v2(schema_payload[sub_schema][prop][item], level + 1)
+                                output[sub_schema][prop][item], partial_attr = (
+                                    parse_payload_v2(schema_payload[sub_schema][prop][item], level + 1))
+
                                 attributes = merge_duplicate_attributes(attributes, partial_attr)
                             elif item == "properties":
-                                output[sub_schema][prop][item], partial_attr = parse_payload_v2(schema_payload[sub_schema][prop][item], level + 1)
+                                output[sub_schema][prop][item], partial_attr = (
+                                    parse_payload_v2(schema_payload[sub_schema][prop][item], level + 1))
+
                                 attributes = merge_duplicate_attributes(attributes, partial_attr)
                             elif item == "type":
                                 if schema_payload[sub_schema][prop][item] == "integer":
@@ -821,8 +859,13 @@ def normalized2keyvalues(normalized_payload, output, tz, test, json_output_filep
             print(e)
             tmp_output[element] = normalized_dict[element]
             output["cause"] = f"Conversion failure"
-            output["time"] = str(datetime.datetime.now(tz=tz))
-            customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False)
+            output["time"] = str(datetime.now(tz=tz))
+            customized_json_dumps(output=output,
+                                  tz=tz,
+                                  test_number=test,
+                                  json_output_filepath=json_output_filepath,
+                                  mail=mail,
+                                  flag=False)
             return False
 
     # print(json.dumps(output, indent=4, sort_keys=True))
@@ -842,7 +885,9 @@ def normalized2keyvalues_v2(normalized_payload, output, tz, test, json_output_fi
             if isinstance(prop, list) and len(prop) > 0 and isinstance(prop[0], dict):
                 tmp_list = list()
                 for idx in range(len(prop)):
-                    sub_output = normalized2keyvalues_v2(prop[idx], output, tz, test, json_output_filepath, mail, level + 1)
+                    sub_output = (
+                        normalized2keyvalues_v2(prop[idx], output, tz, test, json_output_filepath, mail, level + 1))
+
                     if "type" in sub_output and "value" in sub_output:
                         tmp_list.append(sub_output["value"])
                     else:
@@ -854,21 +899,45 @@ def normalized2keyvalues_v2(normalized_payload, output, tz, test, json_output_fi
                 elif "value" in prop:
                     value = prop["value"]
                     if isinstance(value, dict):
-                        tmp_output[element] = normalized2keyvalues_v2({"value": value}, output, tz, test, json_output_filepath, mail, level + 1)["value"]
+                        tmp_output[element] = (
+                            normalized2keyvalues_v2({"value": value},
+                                                    output,
+                                                    tz,
+                                                    test,
+                                                    json_output_filepath,
+                                                    mail,
+                                                    level + 1)
+                            )["value"]
+
                     elif isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
                         tmp_list = []
                         for idx in range(len(value)):
                             if "type" in value[idx] and "value" in value[idx]:
-                                tmp_list.append(normalized2keyvalues_v2(value[idx], output, tz, test, json_output_filepath, mail, level + 1)["value"])
+                                tmp_list.append(
+                                    normalized2keyvalues_v2(value[idx],
+                                                            output,
+                                                            tz,
+                                                            test,
+                                                            json_output_filepath,
+                                                            mail,
+                                                            level + 1)["value"])
                             else:
-                                tmp_list.append(normalized2keyvalues_v2(value[idx], output, tz, test, json_output_filepath, mail, level + 1))
+                                tmp_list.append(
+                                    normalized2keyvalues_v2(value[idx],
+                                                            output,
+                                                            tz,
+                                                            test,
+                                                            json_output_filepath,
+                                                            mail,
+                                                            level + 1))
                         tmp_output[element] = tmp_list
                     else:
                         tmp_output[element] = value
                 elif "object" in prop:
                     tmp_output[element] = prop["object"]
                 elif isinstance(prop, dict):
-                    tmp_output[element] = normalized2keyvalues_v2(prop, output, tz, test, json_output_filepath, mail, level + 1)
+                    tmp_output[element] = (
+                        normalized2keyvalues_v2(prop, output, tz, test, json_output_filepath, mail, level + 1))
                 else:
                     tmp_output[element] = prop
             else:
@@ -878,8 +947,13 @@ def normalized2keyvalues_v2(normalized_payload, output, tz, test, json_output_fi
             print(e)
             tmp_output[element] = normalized_dict[element]
             output["cause"] = f"Conversion failed"
-            output["time"] = str(datetime.datetime.now(tz=tz))
-            customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False)
+            output["time"] = str(datetime.now(tz=tz))
+            customized_json_dumps(output=output,
+                                  tz=tz,
+                                  test_number=test,
+                                  json_output_filepath=json_output_filepath,
+                                  mail=mail,
+                                  flag=False)
             return False
 
     return tmp_output
@@ -1177,7 +1251,8 @@ def check_parameters(output,
                      test="",
                      meta_schema="",
                      tag="",
-                     additional_properties=False):
+                     additional_properties=False,
+                     generate_output_file=False):
 
     schema_dict = dict()
     yaml_dict = dict()
@@ -1190,18 +1265,32 @@ def check_parameters(output,
         # url provided is an existing url
         if not exists_schema[0]:
             output["cause"] = f"Cannot find the {tag} at " + schema_url
-            output["time"] = str(datetime.datetime.now(tz=tz))
-            customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+            output["time"] = str(datetime.now(tz=tz))
+            customized_json_dumps(output=output,
+                                  tz=tz,
+                                  test_number=test,
+                                  json_output_filepath=json_output_filepath,
+                                  mail=mail,
+                                  flag=False,
+                                  is_param_check=True,
+                                  generate_output_file=generate_output_file)
             return False
 
-        # url is actually a json
+        # url is actually a valid json
         try:
-            schema_dict = json.loads(exists_schema[1])
-        except ValueError:
-            output["cause"] = f"{tag} " + schema_url + " is not a valid json"
-            output["time"] = str(datetime.datetime.now(tz=tz))
+            schema_dict = loads(exists_schema[1])
+        except JSONDecodeError as e:
+            output["cause"] = f"{tag} {schema_url} is not a valid json. {e}"
+            output["time"] = str(datetime.now(tz=tz))
             output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
-            customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+            customized_json_dumps(output=output,
+                                  tz=tz,
+                                  test_number=test,
+                                  json_output_filepath=json_output_filepath,
+                                  mail=mail,
+                                  flag=False,
+                                  is_param_check=True,
+                                  generate_output_file=generate_output_file)
             return False
 
         # test that it is a valid schema against the metaschema
@@ -1211,16 +1300,30 @@ def check_parameters(output,
             # echo("schema", schema)
             if not bool(schema):
                 output["cause"] = f"json {tag} returned empty (wrong $ref?)"
-                output["time"] = str(datetime.datetime.now(tz=tz))
+                output["time"] = str(datetime.now(tz=tz))
                 output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
-                customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+                customized_json_dumps(output=output,
+                                      tz=tz,
+                                      test_number=test,
+                                      json_output_filepath=json_output_filepath,
+                                      mail=mail,
+                                      flag=False,
+                                      is_param_check=True,
+                                      generate_output_file=generate_output_file)
                 return False
         except Exception as e:
             print(e)
             output["cause"] = f"json {tag} cannot be fully loaded"
-            output["time"] = str(datetime.datetime.now(tz=tz))
+            output["time"] = str(datetime.now(tz=tz))
             output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
-            customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+            customized_json_dumps(output=output,
+                                  tz=tz,
+                                  test_number=test,
+                                  json_output_filepath=json_output_filepath,
+                                  mail=mail,
+                                  flag=False,
+                                  is_param_check=True,
+                                  generate_output_file=generate_output_file)
             return False
 
         try:
@@ -1230,9 +1333,16 @@ def check_parameters(output,
         except Exception as e:
             print(e)
             output["cause"] = f"{tag} cannot be loaded (possibly invalid $ref)"
-            output["time"] = str(datetime.datetime.now(tz=tz))
+            output["time"] = str(datetime.now(tz=tz))
             output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
-            customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+            customized_json_dumps(output=output,
+                                  tz=tz,
+                                  test_number=test,
+                                  json_output_filepath=json_output_filepath,
+                                  mail=mail,
+                                  flag=False,
+                                  is_param_check=True,
+                                  generate_output_file=generate_output_file)
             return False
 
         # check the duplicated attributes
@@ -1260,9 +1370,16 @@ def check_parameters(output,
             output["cause"] = (f"Duplicated attributes (User-defined properties is duplicated with system-defined "
                                f"properties):\n\t{', '.join(find_duplicates(attributes[2]))}")
 
-            output["time"] = str(datetime.datetime.now(tz=tz))
+            output["time"] = str(datetime.now(tz=tz))
             output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
-            customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+            customized_json_dumps(output=output,
+                                  tz=tz,
+                                  test_number=test,
+                                  json_output_filepath=json_output_filepath,
+                                  mail=mail,
+                                  flag=False,
+                                  is_param_check=True,
+                                  generate_output_file=generate_output_file)
             return False
 
         # key-value and normalized format checking
@@ -1271,46 +1388,81 @@ def check_parameters(output,
             props, flag = check_key_value(schema)
             if isinstance(props, str):
                 output["cause"] = f"{props} in {schema_url.split('/')[-1]}."
-                output["time"] = str(datetime.datetime.now(tz=tz))
+                output["time"] = str(datetime.now(tz=tz))
                 output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
-                customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+                customized_json_dumps(output=output,
+                                      tz=tz,
+                                      test_number=test,
+                                      json_output_filepath=json_output_filepath,
+                                      mail=mail,
+                                      flag=False,
+                                      is_param_check=True,
+                                      generate_output_file=generate_output_file)
                 return False
             else:
                 if not flag:
                     output["cause"] = f"{', '.join(props)} should be in key-value format"
-                    output["time"] = str(datetime.datetime.now(tz=tz))
+                    output["time"] = str(datetime.now(tz=tz))
                     output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
-                    customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+                    customized_json_dumps(output=output,
+                                          tz=tz,
+                                          test_number=test,
+                                          json_output_filepath=json_output_filepath,
+                                          mail=mail,
+                                          flag=False,
+                                          is_param_check=True,
+                                          generate_output_file=generate_output_file)
                     return False
         else:
             # normalized format
             props, flag = check_normalized(schema)
             if isinstance(props, str):
                 output["cause"] = f"{props} in {schema_url.split('/')[-1]}."
-                output["time"] = str(datetime.datetime.now(tz=tz))
+                output["time"] = str(datetime.now(tz=tz))
                 output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
-                customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+                customized_json_dumps(output=output,
+                                      tz=tz,
+                                      test_number=test,
+                                      json_output_filepath=json_output_filepath,
+                                      mail=mail,
+                                      flag=False,
+                                      is_param_check=True,
+                                      generate_output_file=generate_output_file)
                 return False
             else:
                 if not flag:
                     output["cause"] = (f"{', '.join(props)} should be in normalized format, can be caused by missing "
                                        f"`type` or missing `value` or `object`")
 
-                    output["time"] = str(datetime.datetime.now(tz=tz))
+                    output["time"] = str(datetime.now(tz=tz))
                     output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
-                    customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+                    customized_json_dumps(output=output,
+                                          tz=tz,
+                                          test_number=test,
+                                          json_output_filepath=json_output_filepath,
+                                          mail=mail,
+                                          flag=False,
+                                          is_param_check=True,
+                                          generate_output_file=generate_output_file)
                     return False
 
         if schema_url.endswith("schema.json"):
             try:
                 validate(instance=schema, schema=meta_schema, format_checker=Draft202012Validator.FORMAT_CHECKER)
-            except jsonschema.exceptions.ValidationError as err:
+            except ValidationError as err:
                 # print(err)
                 output["cause"] = f"{tag} does not validate as a json schema"
-                output["time"] = str(datetime.datetime.now(tz=tz))
+                output["time"] = str(datetime.now(tz=tz))
                 output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
                 output["errorSchema"] = str(err)
-                customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+                customized_json_dumps(output=output,
+                                      tz=tz,
+                                      test_number=test,
+                                      json_output_filepath=json_output_filepath,
+                                      mail=mail,
+                                      flag=False,
+                                      is_param_check=True,
+                                      generate_output_file=generate_output_file)
                 return False
         else:
             try:
@@ -1358,30 +1510,51 @@ def check_parameters(output,
                     schema.pop("@context")
 
                 validate(instance=schema, schema=meta_schema, format_checker=Draft202012Validator.FORMAT_CHECKER)
-            except jsonschema.exceptions.ValidationError as err:
+            except ValidationError as err:
                 # print(err)
                 spacer = '\n'
                 output["cause"] = f"{tag} does not validate as a json schema. {str(err).split(spacer)[0]}"
-                output["time"] = str(datetime.datetime.now(tz=tz))
+                output["time"] = str(datetime.now(tz=tz))
                 output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
                 output["errorSchema"] = str(err)
-                customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+                customized_json_dumps(output=output,
+                                      tz=tz,
+                                      test_number=test,
+                                      json_output_filepath=json_output_filepath,
+                                      mail=mail,
+                                      flag=False,
+                                      is_param_check=True,
+                                      generate_output_file=generate_output_file)
                 return False
             except SchemaError as err:
                 spacer = '\n'
                 output["cause"] = f"schema.json error while validating the {tag}. {str(err).split(spacer)[0]}"
-                output["time"] = str(datetime.datetime.now(tz=tz))
+                output["time"] = str(datetime.now(tz=tz))
                 output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
                 output["errorSchema"] = str(err)
-                customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+                customized_json_dumps(output=output,
+                                      tz=tz,
+                                      test_number=test,
+                                      json_output_filepath=json_output_filepath,
+                                      mail=mail,
+                                      flag=False,
+                                      is_param_check=True,
+                                      generate_output_file=generate_output_file)
                 return False
             except Exception as err:
                 spacer = '\n'
                 output["cause"] = f"Exception occurs while validating the {tag}. {str(err).split(spacer)[0]}"
-                output["time"] = str(datetime.datetime.now(tz=tz))
+                output["time"] = str(datetime.now(tz=tz))
                 output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
                 output["errorSchema"] = str(err)
-                customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+                customized_json_dumps(output=output,
+                                      tz=tz,
+                                      test_number=test,
+                                      json_output_filepath=json_output_filepath,
+                                      mail=mail,
+                                      flag=False,
+                                      is_param_check=True,
+                                      generate_output_file=generate_output_file)
                 return False
 
     # check email
@@ -1389,9 +1562,16 @@ def check_parameters(output,
         # mail is a real email
         if not checkers.is_email(mail):
             output["cause"] = "mail " + mail + " is not a valid email"
-            output["time"] = str(datetime.datetime.now(tz=tz))
+            output["time"] = str(datetime.now(tz=tz))
             output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
-            customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+            customized_json_dumps(output=output,
+                                  tz=tz,
+                                  test_number=test,
+                                  json_output_filepath=json_output_filepath,
+                                  mail=mail,
+                                  flag=False,
+                                  is_param_check=True,
+                                  generate_output_file=generate_output_file)
             return False
 
     return output, schema_dict, yaml_dict
@@ -1406,18 +1586,30 @@ def is_valid_yaml(output, tz, json_output_filepath, yaml_url="", mail="", test="
     # url provided is an existing url
     if not exists_yaml[0]:
         output["cause"] = f"Cannot find the {tag} at " + yaml_url
-        output["time"] = str(datetime.datetime.now(tz=tz))
-        customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+        output["time"] = str(datetime.now(tz=tz))
+        customized_json_dumps(output=output,
+                              tz=tz,
+                              test_number=test,
+                              json_output_filepath=json_output_filepath,
+                              mail=mail,
+                              flag=False,
+                              is_param_check=True)
         return False
 
     # url is actually a json
     try:
-        yaml_dict = yaml.safe_load(exists_yaml[1])
+        yaml_dict = safe_load(exists_yaml[1])
     except ValueError:
         output["cause"] = f"{tag} " + yaml_url + " is not a valid json"
-        output["time"] = str(datetime.datetime.now(tz=tz))
+        output["time"] = str(datetime.now(tz=tz))
         output["parameters"] = {"schemaUrl": yaml_url, "mail": mail, "test": test}
-        customized_json_dumps(output, tz, test, json_output_filepath, mail, flag=False, is_param_check=True)
+        customized_json_dumps(output=output,
+                              tz=tz,
+                              test_number=test,
+                              json_output_filepath=json_output_filepath,
+                              mail=mail,
+                              flag=False,
+                              is_param_check=True)
         return False
 
     return output, yaml_dict

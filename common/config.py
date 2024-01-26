@@ -56,7 +56,8 @@ cfg_dir = "/etc/fiware.d"
 cfg_filename = environ.get("SDM_QUALITY_TESTING_FILE")
 
 if cfg_filename is None or exists(cfg_filename) is False:
-    print("File does not exist.")
+    print("WARNING: Environment variable 'SDM_QUALITY_TESTING_FILE' is not defined.\n"
+          "Trying to load '/etc/fiware.d/sdm.quality-testing.json' file")
 
     # 1st Alternative: The config file must be in /etc/fiware.d folder
     cfg_filename = join(cfg_dir, '%s.json' % name)
@@ -70,8 +71,6 @@ if cfg_filename is None or exists(cfg_filename) is False:
                   '\n       either in the /etd/init.d directory or ./common folder of the code.' \
                   '\n\n       Please correct at least one of them to execute the program.'
             exit(msg)
-
-print(cfg_filename)
 
 with open(cfg_filename, "r") as file:
     CONFIG_DATA = loads(file.read())

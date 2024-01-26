@@ -134,29 +134,13 @@ async def qtest(request: Request, response: Response):
 
     request.app.logger.debug(f'Request generate quality tests from URL:"{url}", tests:"{tests}", and email:"{email}"')
 
-    sdm_quality_testing = SDMQualityTesting(data_model_repo_url=url, mail=email, last_test_number=tests)
+    sdm_quality_testing = SDMQualityTesting(data_model_repo_url=url,
+                                            mail=email,
+                                            last_test_number=tests,
+                                            logger=request.app.logger)
+
     sdm_quality_testing.do_tests()
 
-    #
-    # # check if the post request has a valid GitHub URL to the model.yaml file of a Data Model in the SDM repository
-    # if check_github_url(url=url):
-    #     request.app.logger.debug(f'Valid GitHub URL: "{url}"')
-    #     sql_schema = generate_sql_schema(model_yaml=url)
-    #     request.app.logger.info(f'SQL Schema: \n"{sql_schema}"')
-    #
-    #     resp = {
-    #         "message": sql_schema
-    #     }
-    #
-    #     request.app.logger.info(f'POST /generate 200 OK')
-    #
-    #     return resp
-    #
-    # else:
-    #     request.app.logger.error(f'Invalid GitHub URL: "{url}"')
-    #     response.status_code = status.HTTP_400_BAD_REQUEST
-    #     resp["message"] = f"Invalid GitHub URL: {url}"
-    #    return resp
     return resp
 
 

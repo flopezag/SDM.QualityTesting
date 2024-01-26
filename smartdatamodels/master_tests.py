@@ -5,10 +5,10 @@
 
 from pytz import timezone
 from smartdatamodels.utils import create_output_json, clean_test_data, send_message
-from smartdatamodels.check_FS_T001_v1 import check_file_structure
-from smartdatamodels.check_FL_schema_T002_v1 import check_fl_schema_json
-from smartdatamodels.check_FL_examples_T003_v1 import check_fl_examples
-from smartdatamodels.check_FL_others_T004_v1 import check_fl_others
+from smartdatamodels.check_FL_schema_T002_v1 import CheckSchema
+from smartdatamodels.check_FS_T001_v1 import CheckStructure
+from smartdatamodels.check_FL_examples_T003_v1 import CheckExamples
+from smartdatamodels.check_FL_others_T004_v1 import CheckOtherFiles
 from common.config import CONFIG_DATA
 
 
@@ -19,18 +19,58 @@ from common.config import CONFIG_DATA
 #   - key: the current test
 #   - value: the tests need to run before running the current test
 #  for example:
-#       3: [1, 2], means if you wanna run test 3, you have to pass the test 1 and 2
+#       3: [1, 2], means if you want to run test 3, you have to pass the test 1 and 2
 #  
 # config_test.json:
 #   contains hyperparameters link to metaschema, timezone, starting test number by default
 # 
 # system parameters:
-#   - datamodelRepoUrl: the url to the github repository of a specific data model 
+#   - data_model_repo_url: the url to the GitHub repository of a specific data model
 #   - mail: the email address related to the contributor
-#   - lasttestnumber: the test that contributor wants to do, 0 by default which means fully test
+#   - last_test_number: the test that contributor wants to do, 0 by default which means fully test
 ################################################
 class SDMQualityTesting:
-    def __init__(self, data_model_repo_url, mail, last_test_number):
+    def __init__(self, data_model_repo_url, mail, last_test_number, logger):
+        meta_schema = CONFIG_DATA["meta_schema"]
+        time_zone = CONFIG_DATA["timezone"]
+        self.test_number = CONFIG_DATA["test_number"]
+        self.generate_output_file = CONFIG_DATA["generate_output_file"]
+
+        self.logger = logger
+        self.tz = timezone(time_zone)
+
+        ################################################
+        # Create output json file for tests
+        # assume the system paras are correct
+        ################################################
+        self.json_output_filepath, output = (
+            create_output_json(self.test_number, data_model_repo_url, mail, self.tz, meta_schema)
+        )
+
+        check_fl_schema_json = CheckSchema(logger=logger,
+                                           data_model_repo_url=data_model_repo_url,
+                                           mail=mail,
+                                           json_output_filepath=self.json_output_filepath,
+                                           generate_output_file=self.generate_output_file).check_fl_schema_json
+
+        check_file_structure = CheckStructure(logger=logger,
+                                              data_model_repo_url=data_model_repo_url,
+                                              mail=mail,
+                                              json_output_filepath=self.json_output_filepath,
+                                              generate_output_file=self.generate_output_file).check_file_structure
+
+        check_fl_examples = CheckExamples(logger=logger,
+                                          data_model_repo_url=data_model_repo_url,
+                                          mail=mail,
+                                          json_output_filepath=self.json_output_filepath,
+                                          generate_output_file=self.generate_output_file).check_fl_examples
+
+        check_fl_others = CheckOtherFiles(logger=logger,
+                                          data_model_repo_url=data_model_repo_url,
+                                          mail=mail,
+                                          json_output_filepath=self.json_output_filepath,
+                                          generate_output_file=self.generate_output_file).check_fl_others
+
         self.number_to_test_name = {
             1: check_file_structure,
             2: check_fl_schema_json,
@@ -52,38 +92,23 @@ class SDMQualityTesting:
             4: [1]
         }
 
-        meta_schema = CONFIG_DATA["meta_schema"]
-        time_zone = CONFIG_DATA["timezone"]
-        self.test_number = CONFIG_DATA["test_number"]
-
-        self.tz = timezone(time_zone)
-
-        ################################################
-        # Create output json file for tests
-        # assume the system paras are correct
-        ################################################
-        self.json_output_filepath, output = (
-            create_output_json(self.test_number, data_model_repo_url, mail, self.tz, meta_schema)
-        )
-
         ################################################
         # Obtain the tests that need to run based on the given test number from contributor
         # and the previous tests
         ################################################
         self.test_state = dict()
-        for key, value in output.items():
+        keys_to_search = [str(x) for x in list(self.test_dependency.keys())]
+        for key in keys_to_search:
             try:
-                if int(key) in self.number_to_test_name.keys():
-                    self.test_state[key] = value["result"]
-            except Exception as e:
-                print(e)
-                continue
+                self.test_state[key] = output[key]["result"]
+            except KeyError:
+                self.test_state[key] = False
 
         self.last_test_number = last_test_number
         self.mail = mail
         self.data_model_repo_url = data_model_repo_url
 
-        print(self.test_state)
+        self.logger.info(f"Test state values: '{self.test_state}'")
 
     def get_need2run_tests(self, test_number, test_state):
         def resolve_dependencies(a_test, the_visited_tests):
@@ -109,17 +134,18 @@ class SDMQualityTesting:
             if str(test) in test_state.keys():
                 if not test_state[str(test)]:
                     # clean the json output
-                    clean_test_data(self.json_output_filepath, test)
+                    clean_test_data(self.json_output_filepath, test, self.logger)
                 else:
                     need2run_test.remove(test)
 
-        print(need2run_test)
+        self.logger.info(f"Tests need to run: '{need2run_test}'")
+
         ordered_test = [self.number_to_test_name[test] for test in need2run_test]
 
         return ordered_test
 
     # get the mapping functions
-    def run_tests(self, tests, data_model_repo_url, tz, mail, json_output_filepath):
+    def run_tests(self, tests, tz):
         # Run the tests in the specified order with the given parameter
         # [# of all tests, # of passed tests, # of failed tests, # of left tests]
         test_stats = [len(tests), 0, 0, len(tests)]
@@ -136,7 +162,8 @@ class SDMQualityTesting:
                     flag = False
                     break
             if flag:
-                if test(data_model_repo_url, tz, test_number, mail, json_output_filepath):
+                # (self, test_number, tz)
+                if test(tz=tz, test_number=test_number):
                     test_stats[1] += 1
                     test_stats[-1] -= 1
                 else:
@@ -151,15 +178,13 @@ class SDMQualityTesting:
     ################################################
     def do_tests(self):
         test_stats = self.run_tests(tests=self.get_need2run_tests(self.last_test_number, self.test_state),
-                                    data_model_repo_url=self.data_model_repo_url,
-                                    tz=self.tz,
-                                    mail=self.mail,
-                                    json_output_filepath=self.json_output_filepath)
+                                    tz=self.tz)
 
-        message = (f"{test_stats[0]} tests needed to run, {test_stats[1]} passed, {test_stats[2]} failed, "
-                   f"{test_stats[3]} left.\n")
+        if self.generate_output_file:
+            message = (f"{test_stats[0]} tests needed to run, {test_stats[1]} passed, {test_stats[2]} failed, "
+                       f"{test_stats[3]} left.\n")
 
-        send_message(test_number=self.test_number,
-                     mail=self.mail,
-                     tz=self.tz,
-                     check_type=message)
+            send_message(test_number=self.test_number,
+                         mail=self.mail,
+                         tz=self.tz,
+                         check_type=message)

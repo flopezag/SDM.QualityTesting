@@ -10,5 +10,6 @@
   "timezone": "Europe/Madrid",
   "full_check": true,
   "test_number": 1,
-  "json_output_dir": "./mastercheck_output/"
+  "json_output_dir": "./mastercheck_output/",
+  "generate_output_file": true
 }
