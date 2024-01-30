@@ -45,7 +45,7 @@ class SDMQualityTesting:
         # Create output json file for tests
         # assume the system paras are correct
         ################################################
-        self.json_output_filepath, output = (
+        self.json_output_filepath, self.output = (
             self.sdm_utils.create_output_json(self.test_number, data_model_repo_url, mail, self.tz, meta_schema)
         )
 
@@ -102,7 +102,7 @@ class SDMQualityTesting:
         keys_to_search = [str(x) for x in list(self.test_dependency.keys())]
         for key in keys_to_search:
             try:
-                self.test_state[key] = output[key]["result"]
+                self.test_state[key] = self.output[key]["result"]
             except KeyError:
                 self.test_state[key] = False
 
@@ -164,8 +164,9 @@ class SDMQualityTesting:
                     flag = False
                     break
             if flag:
-                # (self, test_number, tz)
-                if test(tz=tz, test_number=test_number):
+                result, aux = test(tz=tz, test_number=test_number)
+                self.output[str(test_number)] = aux
+                if result:
                     test_stats[1] += 1
                     test_stats[-1] -= 1
                 else:
@@ -190,3 +191,5 @@ class SDMQualityTesting:
                                         mail=self.mail,
                                         tz=self.tz,
                                         check_type=message)
+
+        return self.output

@@ -20,7 +20,7 @@ class CheckOtherFiles:
 
         self.sdm_utils = SDMUtils(logger=logger, generate_output_file=generate_output_file)
 
-    def check_fl_others(self, tz, test_number):
+    def check_fl_others(self, tz, test_number) -> [bool, dict]:
         """
         Check other files given the data model link
         """
@@ -36,16 +36,16 @@ class CheckOtherFiles:
 
             # check whether yaml file is valid
             cf_output = dict()
-            result = self.sdm_utils.is_valid_yaml(output=cf_output,
-                                                  tz=tz,
-                                                  json_output_filepath=self.json_output_filepath,
-                                                  yaml_url=file_url,
-                                                  mail=self.mail,
-                                                  test=test_number,
-                                                  tag="yamls")
+            result, output, _ = self.sdm_utils.is_valid_yaml(output=cf_output,
+                                                             tz=tz,
+                                                             json_output_filepath=self.json_output_filepath,
+                                                             yaml_url=file_url,
+                                                             mail=self.mail,
+                                                             test=test_number,
+                                                             tag="yamls")
 
             if not result:
-                return result
+                return result, output
 
             # cf_output, yaml_dict = result
 
@@ -59,10 +59,12 @@ class CheckOtherFiles:
 
             # TODO: check there's an email in the ADOPTERS.yaml file
 
-        self.sdm_utils.customized_json_dumps(output=output,
-                                             tz=tz,
-                                             test_number=test_number,
-                                             json_output_filepath=self.json_output_filepath,
-                                             mail=self.mail)
+        output = self.sdm_utils.customized_json_dumps(output=output,
+                                                      tz=tz,
+                                                      test_number=test_number,
+                                                      json_output_filepath=self.json_output_filepath,
+                                                      mail=self.mail)
 
-        return True
+        output['message'] = "Test successfully executed"
+        output.pop('jsonUrl')
+        return True, output

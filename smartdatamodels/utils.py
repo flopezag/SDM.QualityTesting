@@ -308,7 +308,7 @@ class SDMUtils:
             output['subject'] = subject
             output['data_model'] = data_model
             output['mail'] = mail
-            output['date'] = self.get_now(tz)
+            output['date'] = self.get_now(tz, '%Y-%m-%dT%H:%M:%S%z')
             output['repoUrl'] = data_model_repo_url
             output['createdTime'] = self.get_now_verbose(tz, '%Y-%m-%dT%H:%M:%S%z')
             output['lastModifiedTime'] = self.get_now_verbose(tz, '%Y-%m-%dT%H:%M:%S%z')
@@ -358,7 +358,7 @@ class SDMUtils:
                               json_output_filepath: str,
                               mail: str,
                               flag: bool = True,
-                              is_param_check: bool = False):
+                              is_param_check: bool = False) -> dict:
         """
         Create the json output at the end of each check according to the status
 
@@ -400,6 +400,8 @@ class SDMUtils:
                 self.send_message(test_number, mail, tz, check_type="passed", json_output=json_output)
             else:
                 self.send_message(test_number, mail, tz, check_type="failed", json_output=json_output)
+
+        return output
 
     @staticmethod
     def get_json_output_url(json_output, test_number):
@@ -1630,7 +1632,8 @@ class SDMUtils:
 
         return output, schema_dict, yaml_dict
 
-    def is_valid_yaml(self, output, tz, json_output_filepath, yaml_url="", mail="", test="", tag=""):
+    def is_valid_yaml(self, output, tz, json_output_filepath, yaml_url="", mail="", test="", tag="") \
+            -> [bool, dict, dict]:
         """
         Process the model.yaml file
         """
@@ -1647,7 +1650,7 @@ class SDMUtils:
                                        mail=mail,
                                        flag=False,
                                        is_param_check=True)
-            return False
+            return False, output, dict()
 
         # url is actually a json
         try:
@@ -1663,9 +1666,9 @@ class SDMUtils:
                                        mail=mail,
                                        flag=False,
                                        is_param_check=True)
-            return False
+            return False, output, dict()
 
-        return output, yaml_dict
+        return True, output, yaml_dict
 
     ################################################
     # generate examples for referral

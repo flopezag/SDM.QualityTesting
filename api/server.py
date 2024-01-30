@@ -139,7 +139,8 @@ async def qtest(request: Request, response: Response):
                                             last_test_number=tests,
                                             logger=request.app.logger)
 
-    sdm_quality_testing.do_tests()
+    resp = sdm_quality_testing.do_tests()
+    response.status_code = status.HTTP_200_OK
 
     return resp
 

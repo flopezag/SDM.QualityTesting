@@ -28,7 +28,7 @@ class CheckStructure:
         self.sdm_utils = SDMUtils(logger=logger, generate_output_file=generate_output_file)
 
     # url: check whether return 200
-    def check_fs_minimal(self, tz, test_number):
+    def check_fs_minimal(self, tz, test_number) -> [bool, dict]:
         """
         Check the file structure to meet the minimal requirements
             - examples/
@@ -63,7 +63,8 @@ class CheckStructure:
                                                  mail=self.mail,
                                                  flag=False)
 
-            return False
+            output.pop('jsonUrl')
+            return False, output
 
         if not schema_json:
             output["cause"] = (f"{self.data_model_repo_url.split('/')[-1]} Missing schema.json: Cannot open the url at "
@@ -77,7 +78,8 @@ class CheckStructure:
                                                  mail=self.mail,
                                                  flag=False)
 
-            return False
+            output.pop('jsonUrl')
+            return False, output
 
         if not (normalized_json | normalized_jsonld):
             output["cause"] = (f"{self.data_model_repo_url.split('/')[-1]} "
@@ -91,7 +93,8 @@ class CheckStructure:
                                                  mail=self.mail,
                                                  flag=False)
 
-            return False
+            output.pop('jsonUrl')
+            return False, output
 
         self.sdm_utils.customized_json_dumps(output=output,
                                              tz=tz,
@@ -99,7 +102,9 @@ class CheckStructure:
                                              json_output_filepath=self.json_output_filepath,
                                              mail=self.mail)
 
-        return True
+        output['message'] = "Test successfully executed"
+        output.pop('jsonUrl')
+        return True, output
 
     def check_fs_normal(self, tz, test_number):
         """

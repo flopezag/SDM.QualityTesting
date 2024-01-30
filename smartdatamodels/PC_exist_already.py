@@ -116,9 +116,8 @@ class SDMProperties:
                     self.data_available.wait()
 
             keys_yaml_data = list(yaml_dict.keys())
-            keys = [key for key in keys_yaml_data if key not in common_properties]
-            data_properties = [x for x in self.properties if x['property'] in keys]
             keys_to_search = [key for key in keys_yaml_data if key not in common_properties]
+            data_properties = [x for x in self.properties if x['property'] in keys_to_search]
 
             # TODO: Need to check if the attribute is not defined in the smart data models database
             for index, item in enumerate(keys_to_search):

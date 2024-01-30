@@ -7,6 +7,7 @@ from smartdatamodels.PC_exist_already import SDMProperties
 from smartdatamodels.MD_reported import MDReported
 from smartdatamodels.MD_exist import MDExist
 from common.config import CONFIG_DATA
+import time
 
 
 class CheckSchema:
@@ -23,7 +24,7 @@ class CheckSchema:
         self.json_output_filepath = json_output_filepath
         self.generate_output_file = generate_output_file
 
-    def check_fl_schema_json(self, test_number, tz):
+    def check_fl_schema_json(self, test_number, tz) -> [bool, dict]:
         """
         Check file schema.json given the data model link
         """
@@ -54,7 +55,7 @@ class CheckSchema:
 
         # if result is false, then there exists mentioned errors
         if not result:
-            return result
+            return result, output
 
         # if result is true, return
         # output: the json output dictionary
@@ -120,7 +121,10 @@ class CheckSchema:
                                                  test_number=test_number,
                                                  json_output_filepath=self.json_output_filepath,
                                                  mail=self.mail)
-            return True
+
+            output['message'] = "Test successfully executed"
+            output.pop('jsonUrl')
+            return True, output
         else:
             # if any of the subtests is failed
             self.sdm_utils.customized_json_dumps(output=output,
@@ -129,7 +133,9 @@ class CheckSchema:
                                                  json_output_filepath=self.json_output_filepath,
                                                  mail=self.mail,
                                                  flag=False)
-            return False
+
+            output.pop('jsonUrl')
+            return False, output
 
     def schema_output_sum(self, output):
         """

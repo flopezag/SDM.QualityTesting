@@ -25,7 +25,7 @@ class CheckExamples:
         self.sdm_utils = SDMUtils(logger=logger, generate_output_file=generate_output_file)
         self.md_exist = MDExist(logger=logger, generate_output_file=generate_output_file)
 
-    def check_fl_examples(self, tz, test_number):
+    def check_fl_examples(self, tz, test_number) -> [bool, dict]:
         """
         Check files examples given the data model link
         """
@@ -72,7 +72,7 @@ class CheckExamples:
 
             # if result is false, then there exists mentioned errors
             if not result:
-                return result
+                return result, cf_output
 
             # if result is true, return
             # cf_output: the json output dictionary
@@ -103,7 +103,9 @@ class CheckExamples:
                                                      json_output_filepath=self.json_output_filepath,
                                                      mail=self.mail,
                                                      flag=False)
-                return False
+
+                output.pop('jsonUrl')
+                return False, output
 
         try:
             # generate examples referral for example-normalized.json and example-normalized.jsonld
@@ -121,4 +123,6 @@ class CheckExamples:
                                              json_output_filepath=self.json_output_filepath,
                                              mail=self.mail)
 
-        return True
+        output['message'] = "Test successfully executed"
+        output.pop('jsonUrl')
+        return True, output
