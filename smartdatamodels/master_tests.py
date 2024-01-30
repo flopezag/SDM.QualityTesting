@@ -4,11 +4,11 @@
 # it has a dictionary with the result of every test
 
 from pytz import timezone
-from smartdatamodels.utils import create_output_json, clean_test_data, send_message
-from smartdatamodels.check_FL_schema_T002_v1 import CheckSchema
-from smartdatamodels.check_FS_T001_v1 import CheckStructure
-from smartdatamodels.check_FL_examples_T003_v1 import CheckExamples
-from smartdatamodels.check_FL_others_T004_v1 import CheckOtherFiles
+from smartdatamodels.utils import SDMUtils
+from smartdatamodels.check_FL_schema_T002 import CheckSchema
+from smartdatamodels.check_FS_T001 import CheckStructure
+from smartdatamodels.check_FL_examples_T003 import CheckExamples
+from smartdatamodels.check_FL_others_T004 import CheckOtherFiles
 from common.config import CONFIG_DATA
 
 
@@ -39,12 +39,14 @@ class SDMQualityTesting:
         self.logger = logger
         self.tz = timezone(time_zone)
 
+        self.sdm_utils = SDMUtils(logger=logger, generate_output_file=self.generate_output_file)
+
         ################################################
         # Create output json file for tests
         # assume the system paras are correct
         ################################################
         self.json_output_filepath, output = (
-            create_output_json(self.test_number, data_model_repo_url, mail, self.tz, meta_schema)
+            self.sdm_utils.create_output_json(self.test_number, data_model_repo_url, mail, self.tz, meta_schema)
         )
 
         check_fl_schema_json = CheckSchema(logger=logger,
@@ -134,7 +136,7 @@ class SDMQualityTesting:
             if str(test) in test_state.keys():
                 if not test_state[str(test)]:
                     # clean the json output
-                    clean_test_data(self.json_output_filepath, test, self.logger)
+                    self.sdm_utils.clean_test_data(self.json_output_filepath, test, self.logger)
                 else:
                     need2run_test.remove(test)
 
@@ -184,7 +186,7 @@ class SDMQualityTesting:
             message = (f"{test_stats[0]} tests needed to run, {test_stats[1]} passed, {test_stats[2]} failed, "
                        f"{test_stats[3]} left.\n")
 
-            send_message(test_number=self.test_number,
-                         mail=self.mail,
-                         tz=self.tz,
-                         check_type=message)
+            self.sdm_utils.send_message(test_number=self.test_number,
+                                        mail=self.mail,
+                                        tz=self.tz,
+                                        check_type=message)

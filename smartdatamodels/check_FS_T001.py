@@ -13,7 +13,8 @@
 #  Other cases: general acceptable data model, and complete data model structure (CM)
 
 from datetime import datetime
-from smartdatamodels.utils import is_url_existed, customized_json_dumps, send_message
+# from smartdatamodels.utils import is_url_existed, customized_json_dumps, send_message
+from smartdatamodels.utils import SDMUtils
 
 
 class CheckStructure:
@@ -23,6 +24,8 @@ class CheckStructure:
         self.mail = mail
         self.json_output_filepath = json_output_filepath
         self.generate_output_file = generate_output_file
+
+        self.sdm_utils = SDMUtils(logger=logger, generate_output_file=generate_output_file)
 
     # url: check whether return 200
     def check_fs_minimal(self, tz, test_number):
@@ -36,18 +39,16 @@ class CheckStructure:
         output = {"result": False}  # the json answering the test
 
         examples = (
-            is_url_existed(self.data_model_repo_url + "/examples", "examples"))[0]
+            self.sdm_utils.is_url_existed(self.data_model_repo_url + "/examples"))[0]
 
         schema_json = (
-            is_url_existed(self.data_model_repo_url + "/schema.json", "schema.json"))[0]
+            self.sdm_utils.is_url_existed(self.data_model_repo_url + "/schema.json"))[0]
 
         normalized_json = (
-            is_url_existed(self.data_model_repo_url + "/examples/example-normalized.json",
-                           "example-normalized.json"))[0]
+            self.sdm_utils.is_url_existed(self.data_model_repo_url + "/examples/example-normalized.json"))[0]
 
         normalized_jsonld = (
-            is_url_existed(self.data_model_repo_url + "/examples/example-normalized.jsonld",
-                           "example-normalized.jsonld"))[0]
+            self.sdm_utils.is_url_existed(self.data_model_repo_url + "/examples/example-normalized.jsonld"))[0]
 
         if not examples:
             output["cause"] = (f"{self.data_model_repo_url.split('/')[-1]} "
@@ -55,13 +56,12 @@ class CheckStructure:
                                f"{self.data_model_repo_url}/examples")
 
             output["time"] = str(datetime.now(tz=tz))
-            customized_json_dumps(output=output,
-                                  tz=tz,
-                                  test_number=test_number,
-                                  json_output_filepath=self.json_output_filepath,
-                                  mail=self.mail,
-                                  flag=False,
-                                  generate_output_file=self.generate_output_file)
+            self.sdm_utils.customized_json_dumps(output=output,
+                                                 tz=tz,
+                                                 test_number=test_number,
+                                                 json_output_filepath=self.json_output_filepath,
+                                                 mail=self.mail,
+                                                 flag=False)
 
             return False
 
@@ -70,13 +70,12 @@ class CheckStructure:
                                f"{self.data_model_repo_url}/schema.json")
 
             output["time"] = str(datetime.now(tz=tz))
-            customized_json_dumps(output=output,
-                                  tz=tz,
-                                  test_number=test_number,
-                                  json_output_filepath=self.json_output_filepath,
-                                  mail=self.mail,
-                                  flag=False,
-                                  generate_output_file=self.generate_output_file)
+            self.sdm_utils.customized_json_dumps(output=output,
+                                                 tz=tz,
+                                                 test_number=test_number,
+                                                 json_output_filepath=self.json_output_filepath,
+                                                 mail=self.mail,
+                                                 flag=False)
 
             return False
 
@@ -85,22 +84,20 @@ class CheckStructure:
                                f"Missing example-normalized.json or example-normalized.jsonld: at least one is a must")
 
             output["time"] = str(datetime.now(tz=tz))
-            customized_json_dumps(output=output,
-                                  tz=tz,
-                                  test_number=test_number,
-                                  json_output_filepath=self.json_output_filepath,
-                                  mail=self.mail,
-                                  flag=False,
-                                  generate_output_file=self.generate_output_file)
+            self.sdm_utils.customized_json_dumps(output=output,
+                                                 tz=tz,
+                                                 test_number=test_number,
+                                                 json_output_filepath=self.json_output_filepath,
+                                                 mail=self.mail,
+                                                 flag=False)
 
             return False
 
-        customized_json_dumps(output=output,
-                              tz=tz,
-                              test_number=test_number,
-                              json_output_filepath=self.json_output_filepath,
-                              mail=self.mail,
-                              generate_output_file=self.generate_output_file)
+        self.sdm_utils.customized_json_dumps(output=output,
+                                             tz=tz,
+                                             test_number=test_number,
+                                             json_output_filepath=self.json_output_filepath,
+                                             mail=self.mail)
 
         return True
 
@@ -135,7 +132,7 @@ class CheckStructure:
         Check the file structure
         """
         if self.generate_output_file:
-            send_message(test_number, self.mail, tz, check_type="loading")
+            self.sdm_utils.send_message(test_number, self.mail, tz, check_type="loading")
 
         if check_type == "minimal":
             #     def check_fs_minimal(self, tz, test_number):

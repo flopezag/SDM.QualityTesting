@@ -1,8 +1,0 @@
-{
-    "metaSchema": "https://json-schema.org/draft/2020-12/meta/validation",
-    "timezone": "Europe/Madrid",
-    "fullCheck": true,
-    "testnumber": 1,
-    "json_output_dir": "./mastercheck_output/"
-}
-

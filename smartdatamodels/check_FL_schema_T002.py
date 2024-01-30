@@ -1,18 +1,21 @@
 # FL stands for inside file check for one data model
 # this python file is focused on schema.json file
 
-from smartdatamodels.utils import (get_schema_json_raw, send_message, open_jsonref, check_parameters,
-                                   customized_json_dumps, CHECKED_PROPERTY_CASES)
-from smartdatamodels.PC_well_documented_v1 import is_well_documented
-from smartdatamodels.PC_exist_already_v1 import SDMProperties
-from smartdatamodels.MD_reported_v1 import is_metadata_properly_reported
-from smartdatamodels.MD_exist_v1 import is_metadata_existed
+from smartdatamodels.utils import SDMUtils
+from smartdatamodels.PC_well_documented import SDMWellDocumented
+from smartdatamodels.PC_exist_already import SDMProperties
+from smartdatamodels.MD_reported import MDReported
+from smartdatamodels.MD_exist import MDExist
 from common.config import CONFIG_DATA
 
 
 class CheckSchema:
     def __init__(self, logger, data_model_repo_url, mail, json_output_filepath, generate_output_file=False):
         self.sdm_properties = SDMProperties(logger=logger)
+        self.sdm_utils = SDMUtils(logger=logger, generate_output_file=generate_output_file)
+        self.sdm_well_documented = SDMWellDocumented(logger=logger, generate_output_file=generate_output_file)
+        self.md_reported = MDReported(logger=logger, generate_output_file=generate_output_file)
+        self.md_exist = MDExist(logger=logger, generate_output_file=generate_output_file)
 
         self.logger = logger
         self.data_model_repo_url = data_model_repo_url
@@ -25,14 +28,14 @@ class CheckSchema:
         Check file schema.json given the data model link
         """
         if self.generate_output_file:
-            send_message(test_number, self.mail, tz, check_type="loading")
+            self.sdm_utils.send_message(test_number, self.mail, tz, check_type="loading")
 
         output = {"result": False}  # the json answering the test
 
-        raw_schema_url = get_schema_json_raw(self.data_model_repo_url)
+        raw_schema_url = self.sdm_utils.get_schema_json_raw(self.data_model_repo_url)
 
         meta_schema = CONFIG_DATA["meta_schema"]
-        meta_schema = open_jsonref(meta_schema)
+        meta_schema = self.sdm_utils.open_jsonref(meta_schema)
 
         # check the parameters
         # 1. whether schema.json file is readable
@@ -40,15 +43,14 @@ class CheckSchema:
         # 3. whether schema is valid
         # 4. whether properties are duplicated defined
         # 5. whether email is valid
-        result = check_parameters(output=output,
-                                  tz=tz,
-                                  json_output_filepath=self.json_output_filepath,
-                                  schema_url=raw_schema_url,
-                                  mail=self.mail,
-                                  test=test_number,
-                                  meta_schema=meta_schema,
-                                  tag="Schema",
-                                  generate_output_file=self.generate_output_file)
+        result = self.sdm_utils.check_parameters(output=output,
+                                                 tz=tz,
+                                                 json_output_filepath=self.json_output_filepath,
+                                                 schema_url=raw_schema_url,
+                                                 mail=self.mail,
+                                                 test=test_number,
+                                                 meta_schema=meta_schema,
+                                                 tag="Schema")
 
         # if result is false, then there exists mentioned errors
         if not result:
@@ -62,70 +64,71 @@ class CheckSchema:
 
         # subtest 1 - check whether the properties are well documented
         if self.generate_output_file:
-            send_message(test_number=test_number,
-                         mail=self.mail,
-                         tz=tz,
-                         check_type="processing",
-                         json_output=None,
-                         sub_test_name="Whether properties are well documented")
+            aux = "Whether properties are well documented"
+            self.sdm_utils.send_message(test_number=test_number,
+                                        mail=self.mail,
+                                        tz=tz,
+                                        check_type="processing",
+                                        json_output=None,
+                                        sub_test_name=aux)
 
-        output = is_well_documented(output, yaml_dict, self.data_model_repo_url)
+        output = self.sdm_well_documented.is_well_documented(output, yaml_dict, self.data_model_repo_url)
 
         # subtest 2 - check whether the properties are defined in the database
         if self.generate_output_file:
-            send_message(test_number=test_number,
-                         mail=self.mail,
-                         tz=tz,
-                         check_type="processing",
-                         json_output=None,
-                         sub_test_name="Whether properties are existed in the database")
+            aux = "Whether properties are existed in the database"
+            self.sdm_utils.send_message(test_number=test_number,
+                                        mail=self.mail,
+                                        tz=tz,
+                                        check_type="processing",
+                                        json_output=None,
+                                        sub_test_name=aux)
 
         output = self.sdm_properties.is_property_already_existed(output, yaml_dict)
 
         # subtest 3 - check whether the metadata is properly reported
         if self.generate_output_file:
-            send_message(test_number=test_number,
-                         mail=self.mail,
-                         tz=tz,
-                         check_type="processing",
-                         json_output=None,
-                         sub_test_name="Metadata part 1 (derivedFrom, license)")
+            aux = "Metadata part 1 (derivedFrom, license)"
+            self.sdm_utils.send_message(test_number=test_number,
+                                        mail=self.mail,
+                                        tz=tz,
+                                        check_type="processing",
+                                        json_output=None,
+                                        sub_test_name=aux)
 
-        output = is_metadata_properly_reported(output, schema_dict)
+        output = self.md_reported.is_metadata_properly_reported(output, schema_dict)
 
         # subtest 4 - check whether the metadata is existent
         if self.generate_output_file:
-            send_message(test_number=test_number,
-                         mail=self.mail,
-                         tz=tz,
-                         check_type="processing",
-                         json_output=None,
-                         sub_test_name=
-                         "Metadata part 2 ($schema, $id, title, description, modelTags, $schemaVersion, required)")
+            aux = "Metadata part 2 ($schema, $id, title, description, modelTags, $schemaVersion, required)"
+            self.sdm_utils.send_message(test_number=test_number,
+                                        mail=self.mail,
+                                        tz=tz,
+                                        check_type="processing",
+                                        json_output=None,
+                                        sub_test_name=aux)
 
-        output = is_metadata_existed(output, schema_dict, self.data_model_repo_url)
+        output = self.md_exist.is_metadata_existed(output, schema_dict, self.data_model_repo_url)
 
         # make a summary of output
         results = self.schema_output_sum(output)
         output["sumup_results"] = results
 
         if not results["Failed"]:
-            customized_json_dumps(output=output,
-                                  tz=tz,
-                                  test_number=test_number,
-                                  json_output_filepath=self.json_output_filepath,
-                                  mail=self.mail,
-                                  generate_output_file=self.generate_output_file)
+            self.sdm_utils.customized_json_dumps(output=output,
+                                                 tz=tz,
+                                                 test_number=test_number,
+                                                 json_output_filepath=self.json_output_filepath,
+                                                 mail=self.mail)
             return True
         else:
             # if any of the subtests is failed
-            customized_json_dumps(output=output,
-                                  tz=tz,
-                                  test_number=test_number,
-                                  json_output_filepath=self.json_output_filepath,
-                                  mail=self.mail,
-                                  flag=False,
-                                  generate_output_file=self.generate_output_file)
+            self.sdm_utils.customized_json_dumps(output=output,
+                                                 tz=tz,
+                                                 test_number=test_number,
+                                                 json_output_filepath=self.json_output_filepath,
+                                                 mail=self.mail,
+                                                 flag=False)
             return False
 
     def schema_output_sum(self, output):
@@ -139,7 +142,7 @@ class CheckSchema:
         metadata = output['metadata']
 
         results = dict()
-        results = {key: dict() if key == 'Failed' else list() for key in CHECKED_PROPERTY_CASES}
+        results = {key: dict() if key == 'Failed' else list() for key in self.sdm_utils.get_check_property_cases()}
         # results = {key: [] for key in CHECKED_PROPERTY_CASES}
         # results['Failed'] = dict()
 
