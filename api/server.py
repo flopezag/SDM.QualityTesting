@@ -35,11 +35,12 @@ from secure import (
     Secure,
 )
 from logging import getLogger
-from pathlib import Path
 from api.custom_logging import CustomizeLogger
-from json import load, JSONDecodeError
+from json import JSONDecodeError
 from common.config import CONFIG_DATA
 from smartdatamodels.master_tests import SDMQualityTesting
+from smartdatamodels.SDMLinks import SDMLinks
+from re import match
 
 initial_uptime = datetime.now()
 logger = getLogger(__name__)
@@ -56,6 +57,7 @@ def create_app() -> FastAPI:
 
 
 application = create_app()
+sdm_links = SDMLinks(logger=application.logger)
 
 
 @application.middleware("http")
@@ -128,13 +130,19 @@ async def qtest(request: Request, response: Response):
         response.status_code = status.HTTP_400_BAD_REQUEST
         return resp
 
-    url = req_info["url"]
+    # url can be a complete url to the repository or an Entity Name,
+    found, data = get_url_key(url=req_info["data_model"], logger=request.app.logger)
     email = req_info["email"]
     tests = req_info["tests"]
 
-    request.app.logger.debug(f'Request generate quality tests from URL:"{url}", tests:"{tests}", and email:"{email}"')
+    request.app.logger.debug(
+        f'Request generate quality tests from Data Model:"{data}", tests:"{tests}", and email:"{email}"')
 
-    sdm_quality_testing = SDMQualityTesting(data_model_repo_url=url,
+    if found == 'entity':
+        data = sdm_links.get_links(entity_name=data)
+        data = data['entity_repo_link']
+
+    sdm_quality_testing = SDMQualityTesting(data_model_repo_url=data,
                                             mail=email,
                                             last_test_number=tests,
                                             logger=request.app.logger)
@@ -158,21 +166,26 @@ def get_uptime():
     return fmt.format(d=days, h=hours, m=minutes, s=seconds)
 
 
-def get_url():
-    config_path = Path.cwd().joinpath("common/config.json")
+def get_url_key(url: str, logger) -> [str, str]:
+    pattern = r"^(https?|git):\/\/github\.com\/([A-Za-z0-9_\-\.]+)(\/[A-Za-z0-9_\-\.]+)+$"
+    find = match(pattern, url)
 
-    with open(config_path) as config_file:
-        config = load(config_file)
+    if find is not None:
+        logger.info(f"Received GitHub URL: {url}")
+        return 'url', url
+    else:
+        # We need to check that it is an EntityName it must be characters
+        pattern = r"^[a-zA-Z0-9_]+$"
+        find = match(pattern, url)
 
-    url = f"{config['broker']}/ngsi-ld/v1/entityOperations/create"
-
-    return url
-
-
-def check_github_url(url: str) -> bool:
-    github_url_pattern = r"https://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+)"
-
-    return True
+        if find is not None:
+            logger.info(f"Received an Entity Type/Data Model name: '{url}")
+            return 'entity', url
+        else:
+            logger.error(
+                f"Unknown data received, it should be an GitHub url or an Entity Type/Data Model name. Received: '{url}"
+            )
+            return 'error', None
 
 
 def launch(app: str = "server:application", host: str = "127.0.0.1", port: int = 5500):
