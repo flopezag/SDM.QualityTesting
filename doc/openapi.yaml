@@ -1,0 +1,79 @@
+openapi: 3.0.0
+info:
+  title: SDM SQL Schema Generation
+  version: 1.0.0
+  description: FastAPI application for SDM Quality Testing
+
+paths:
+  /version:
+    get:
+      summary: Get version information
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  doc:
+                    type: string
+                  git_hash:
+                    type: string
+                  version:
+                    type: string
+                  release_date:
+                    type: string
+                  uptime:
+                    type: string
+
+  /qtest:
+    post:
+      summary: Quality Testing of a Data Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SDMQualityTesting'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+components:
+  schemas:
+    Local:
+      type: object
+      properties:
+        number:
+          type: number
+        string:
+          type: string
+        localCircular:
+          $ref: '#/components/schemas/Local'
+    SDMQualityTesting:
+      type: object
+      properties:
+        data_model_repo_url:
+          type: string
+        mail:
+          type: string
+        last_test_number:
+          type: integer
+      required:
+        - data_model_repo_url
+        - mail
+        - last_test_number
