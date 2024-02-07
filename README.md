@@ -46,3 +46,41 @@ Execute the following command in the terminal:
     ```shell
     pip install -r requirements.txt
     ```
+
+# Running the code 
+To run the code use the following commands and instructions: 
+
+```
+Usage:
+  sdm_qatesting.py run (--input FILE) [--output]
+  sdm_qatesting.py server [--host HOST] [--port PORT]
+  sdm_qatesting.py (-h | --help)
+  sdm_qatesting.py --version
+
+Arguments:
+  FILE   input file
+  PORT   http port used by the service
+
+Options:
+  -i, --input FILEIN  specify the RDF turtle file to parser
+  -o, --output        generate the corresponding files of the parser RDF turtle file
+  -h, --host HOST     launch the server in the corresponding host
+                      [default: 127.0.0.1]
+  -p, --port PORT     launch the server in the corresponding port
+                      [default: 5600]
+
+  -H, --help          show this help message and exit
+  -v, --version       show version and exit
+  ``````
+
+# OpenAPI documentation
+
+the full OpenAPI specification is located under [doc/openapi.yaml](doc/openapi.yaml)
+
+This specification defines two paths: /version and /qtest:  
+
+- The `/version` path has a single `GET` operation that returns version information. 
+- The `/qtest` path has a single `POST` operation that performs quality testing of a data model. 
+
+The `Local` and `SDMQualityTesting` schemas are also defined in the components section.
+
