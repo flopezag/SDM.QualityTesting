@@ -1,10 +1,10 @@
 # SDM.QualityTesting
 
-Python server to check the quality of a data model included in the Smart Data Models program
+Python server to check the quality of a data model included in the Smart Data Models program.
 
 # Create a Python Virtual Environement 
 
-Please note that this is a python 3.11 project, to install it chech this [link](https://www.python.org/downloads/).
+Please note that this is a Python 3.11 project, to install it, check this [link](https://www.python.org/downloads/).
 
 To create a virtual environment in Python using the `venv` module, the following command can be executed in the terminal:
 
@@ -46,6 +46,11 @@ Execute the following command in the terminal:
     ```shell
     pip install -r requirements.txt
     ```
+4. **Exit the virtual environment**: 
+Once done, make sure to exit from the virtual environment by running this command:
+    ```shell
+    deactivate
+    ```
 
 # Running the code 
 To run the code use the following commands and instructions: 
@@ -62,8 +67,8 @@ Arguments:
   PORT   http port used by the service
 
 Options:
-  -i, --input FILEIN  specify the RDF turtle file to parser
-  -o, --output        generate the corresponding files of the parser RDF turtle file
+  -i, --input FILEIN  sdescription to specify the file to the script
+  -o, --output        generate the corresponding output file
   -h, --host HOST     launch the server in the corresponding host
                       [default: 127.0.0.1]
   -p, --port PORT     launch the server in the corresponding port
@@ -77,10 +82,21 @@ Options:
 
 the full OpenAPI specification is located under [doc/openapi.yaml](doc/openapi.yaml)
 
-This specification defines two paths: /version and /qtest:  
+This specification defines two paths: `/version` and `/qtest`:  
 
-- The `/version` path has a single `GET` operation that returns version information. 
-- The `/qtest` path has a single `POST` operation that performs quality testing of a data model. 
+## The `/version` path
 
-The `Local` and `SDMQualityTesting` schemas are also defined in the components section.
+- The purpose of the /version path is to provide clients with version information, including details such as the document, git hash, version, release date, and uptime. 
+- The API defines an endpoint for retrieving version information. 
+- When a `GET` request is sent to the `/version` path, the API returns a JSON object containing details such as the document, git hash, version, release date, and uptime. 
+- The API logs relevant information, such as the request for version information, using the provided logger.
+
+## The `/qtest` path
+
+- The `/qtest` path serves as an endpoint for performing quality testing of a data model. 
+- When a `POST` operation is sent to this path, the API expects a JSON payload containing details of the data model, such as the GitHub URL to the data model's model.yaml, the email associated with the testing, and the number of tests to be performed. 
+- Upon receiving the request, the API processes the information, conducts the quality tests, and returns the results.
+- The associated SDMQualityTesting schema, which defines the structure of the expected JSON payload, is utilized in this process. 
+- the API logs relevant information, such as the request for quality testing and any potential errors, using the provided logger. 
+
 
