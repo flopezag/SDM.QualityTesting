@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  title: SDM SQL Schema Generation
+  title: SDM Quality Testing
   version: 1.0.0
   description: FastAPI application for SDM Quality Testing
 
@@ -10,7 +10,7 @@ paths:
       summary: Get version information
       responses:
         '200':
-          description: OK
+          description: The service is up and running
           content:
             application/json:
               schema:
@@ -38,7 +38,7 @@ paths:
               $ref: '#/components/schemas/SDMQualityTesting'
       responses:
         '200':
-          description: OK
+          description: The Quality Info has been generated
           content:
             application/json:
               schema:
