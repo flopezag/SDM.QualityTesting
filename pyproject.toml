@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Python Server to execute SDM Quality Testing operations"
 authors = ["Fernando López Aguilar <fernando.lopez@fiware.org>"]
 readme = "README.md"
-packages = [{include = "sdm"}]
+
 
 [tool.poetry.dependencies]
 python = "^3.11"
