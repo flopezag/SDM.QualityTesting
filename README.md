@@ -1,6 +1,19 @@
 # SDM.QualityTesting
 
-Python server to check the quality of a data model included in the Smart Data Models program.
+The SDM.QualityTesting service is a Python server dedicated to assessing the **quality** of a **data model** within the Smart Data Models program.
+
+It offers an OpenAPI specification with two distinct paths: `/version` and `/qtest`.
+
+**Path: `/version`**
+
+- The `/version` path is used to provide clients with version information, including details such as the document, git hash, version, release date, and uptime.
+
+**Path: `/qtest`**
+
+- Description: A POST operation used to perform quality testing of a data model.
+- Request Body: Expects a JSON payload with details of the data model, such as the GitHub URL to the data model's model.yaml, the associated email for testing, and the number of tests to be conducted
+
+This service aims to streamline the quality assessment process for data models, providing a structured and efficient means of ensuring the robustness and reliability of the models within the Smart Data Models
 
 # Create a Python Virtual Environement 
 
