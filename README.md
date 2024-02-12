@@ -46,7 +46,7 @@ Execute the following command in the terminal:
     ```shell
     pip install -r requirements.txt
     ```
-4. **Exit the virtual environment**: 
+4. **Deactivate and exit the virtual environment**: 
 Once done, make sure to exit from the virtual environment by running this command:
     ```shell
     deactivate
@@ -67,7 +67,7 @@ Arguments:
   PORT   http port used by the service
 
 Options:
-  -i, --input FILEIN  sdescription to specify the file to the script
+  -i, --input FILEIN  description to specify the file to the script
   -o, --output        generate the corresponding output file
   -h, --host HOST     launch the server in the corresponding host
                       [default: 127.0.0.1]
