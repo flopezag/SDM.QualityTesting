@@ -96,4 +96,5 @@ This specification defines two paths: `/version` and `/qtest`:
 - The associated SDMQualityTesting schema, which defines the structure of the expected JSON payload, is utilized in this process. 
 - the API logs relevant information, such as the request for quality testing and any potential errors, using the provided logger. 
 
-
+# License
+These scripts are licensed under Apache License 2.0.
