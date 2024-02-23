@@ -15,22 +15,9 @@ It offers an OpenAPI specification with two distinct paths: `/version` and `/qte
 
 This service aims to streamline the quality assessment process for data models, providing a structured and efficient means of ensuring the robustness and reliability of the models within the Smart Data Models
 
-# Create a Python Virtual Environement 
-
-Please note that this is a Python 3.11 project, to install it, check this [link](https://www.python.org/downloads/).
-
-To create a virtual environment in Python using the `venv` module, the following command can be executed in the terminal:
-
-```shell
-python3 -m venv venv
-```
-To activate a virtual environment named "venv" in the root path, you can use the following command:
-
-```shell
-source venv/bin/activate
-```
-
 # Poetry Initialization - Running the Project Locally 
+
+Please note that this is a **Python 3.11** project, to install it, check this [link](https://www.python.org/downloads/).
 
 To manage the dependencies in this project and for Python package management, Poetry is used. 
 
@@ -55,10 +42,7 @@ Execute the following command in the terminal:
     ```shell
     poetry install
     ```
-    Another alternative is to use this command: 
-    ```shell
-    pip install -r requirements.txt
-    ```
+    
 4. **Deactivate and exit the virtual environment**: 
 Once done, make sure to exit from the virtual environment by running this command:
     ```shell
