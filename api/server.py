@@ -188,7 +188,7 @@ def get_url_key(url: str, logger) -> [str, str]:
             return 'error', None
 
 
-def launch(app: str = "server:application", host: str = "127.0.0.1", port: int = 5500):
+def launch(app: str = "server:application", host: str = "127.0.0.1", port: int = 5600):
     run(
         app=app,
         host=host,
