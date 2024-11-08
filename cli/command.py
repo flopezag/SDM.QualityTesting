@@ -32,8 +32,8 @@ Arguments:
   PORT   http port used by the service
 
 Options:
-  -i, --input FILEIN  specify the RDF turtle file to parser
-  -o, --output        generate the corresponding files of the parser RDF turtle file
+  -i, --input FILEIN  description to specify the file to the script
+  -o, --output        generate the corresponding output file
   -h, --host HOST     launch the server in the corresponding host
                       [default: 127.0.0.1]
   -p, --port PORT     launch the server in the corresponding port
