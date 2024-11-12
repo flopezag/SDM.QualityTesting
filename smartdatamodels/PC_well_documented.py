@@ -140,25 +140,43 @@ class SDMWellDocumented:
                             attributes.add(prop)
 
                     if "properties" in prop_keys:
-                        partial_output = self.parse_yaml_dict(yaml_dict[prop]["properties"], data_model_repo_url, level + 1)
+                        partial_output = self.parse_yaml_dict(yaml_dict[prop]["properties"],
+                                                              data_model_repo_url,
+                                                              level + 1)
+
                         output = dict(output, **partial_output)
                     if "items" in prop_keys and yaml_dict[prop]["items"]:
                         if isinstance(yaml_dict[prop]["items"], list):
                             for index in range(len(yaml_dict[prop]["items"])):
                                 partial_output = (
-                                    self.parse_yaml_dict(yaml_dict[prop]["items"][index], data_model_repo_url, level + 1))
+                                    self.parse_yaml_dict(yaml_dict[prop]["items"][index],
+                                                         data_model_repo_url,
+                                                         level + 1))
+
                                 output = dict(output, **partial_output)
                         else:
-                            partial_output = self.parse_yaml_dict(yaml_dict[prop]["items"], data_model_repo_url, level + 1)
+                            partial_output = self.parse_yaml_dict(yaml_dict[prop]["items"],
+                                                                  data_model_repo_url,
+                                                                  level + 1)
+
                             output = dict(output, **partial_output)
                     if "anyOf" in prop_keys:
-                        partial_output = self.parse_yaml_dict(yaml_dict[prop]["anyOf"], data_model_repo_url, level + 1)
+                        partial_output = self.parse_yaml_dict(yaml_dict[prop]["anyOf"],
+                                                              data_model_repo_url,
+                                                              level + 1)
+
                         output = dict(output, **partial_output)
                     if "allOf" in prop_keys:
-                        partial_output = self.parse_yaml_dict(yaml_dict[prop]["allOf"], data_model_repo_url, level + 1)
+                        partial_output = self.parse_yaml_dict(yaml_dict[prop]["allOf"],
+                                                              data_model_repo_url,
+                                                              level + 1)
+
                         output = dict(output, **partial_output)
                     if "oneOf" in prop_keys:
-                        partial_output = self.parse_yaml_dict(yaml_dict[prop]["oneOf"], data_model_repo_url, level + 1)
+                        partial_output = self.parse_yaml_dict(yaml_dict[prop]["oneOf"],
+                                                              data_model_repo_url,
+                                                              level + 1)
+
                         output = dict(output, **partial_output)
 
         return output
@@ -168,8 +186,6 @@ class SDMWellDocumented:
         Make summary for yamlDict
         """
         documented = "documentationStatusOfProperties"
-        # echo("yamlDict", yamlDict)
-        # output[documented] = {}
         output[documented] = self.parse_yaml_dict(yaml_dict, data_model_repo_url, 1)
 
         # for key in yamlDict:

@@ -49,14 +49,14 @@ class SDMProperties:
         self.data_available = Condition()
 
         # Create a stop event
-        self._kill = Event()
+        self.__kill = Event()
 
         # Start the background thread
-        self.background_thread = Thread(target=self.check_file_background)
+        self.background_thread = Thread(target=self.check_file_background, args=(self.__kill,))
         self.background_thread.start()
 
-    def check_file_background(self):
-        while not self._kill.is_set():
+    def check_file_background(self, event: Event):
+        while not event.is_set():
             if exists(self.gz_save_path):
                 modified_time = datetime.fromtimestamp(getmtime(self.gz_save_path))
                 current_time = datetime.now()
@@ -162,11 +162,6 @@ class SDMProperties:
                 # descriptions = [list(set(x)) for x in descriptions]
                 # properties_problem_description = [x for x in descriptions if len(x) > 1]
                 #
-                # if len(properties_problem_description) > 0:
-                #     output["alreadyUsedProperties"].append(
-                #         {"Error": f"Same property '{item}' with different descriptions provided: "
-                #                   f"{properties_problem_description}."})
-
                 types.append(
                     [f"{index + 1}.-{get_value(x, 'type', 'missing type')}"
                      for x in aux])
@@ -181,9 +176,6 @@ class SDMProperties:
                         {"Error": f"Same property '{item}' with different types provided: "
                                   f"{properties_problem_type}."})
 
-                # message = (f"Already used in data models: '{', '.join(data_models_list[index])}' "
-                #           f"with these definitions: '{chr(13).join(descriptions[index])}' "
-                #           f"and these data types: '{', '.join(types[index])}'")
                 message = (f"Already used in data models: '{', '.join(data_models_list[0])}' "
                            f"with these definitions: '{chr(13).join(descriptions[0])}' "
                            f"and these data types: '{', '.join(types[0])}'")
@@ -202,10 +194,10 @@ class SDMProperties:
         """
 
         # Signal the thread to stop
-        self._kill.set()
+        self.__kill.set()
 
         # Wait for the thread to finish
         self.background_thread.join()
         self.background_thread.join()
 
-        self.logger.debug("Thread has been stopped.")
+        self.logger.debug("SDMProperties::Thread has been stopped.")

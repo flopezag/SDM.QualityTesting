@@ -64,7 +64,7 @@ class SDMUtils:
         # Simple message formats are:
         #   - starting, ending, under processing, loading, passed, failed, previous tests message...
         #
-        # Complex message formats are schema related, in order to give more concise info for contirbutors
+        # Complex message formats are schema related, in order to give more concise info for contributors
         ################################################
 
         self.newline = "\n"
@@ -133,8 +133,9 @@ class SDMUtils:
             check_type (str): the types of check processing, including: "start", "loading", "passed", "processing",
                         "failed", "previous"
             json_output [None|dict]: the output dictionary for all tests
-            sub_test_name (str): the name of the sub_test. In schema.json check, it includes property check and metadata check;
-                                In examples check, it contains the checks for four types of example files
+            sub_test_name (str): the name of the sub_test. In schema.json check, it includes property check and
+                                 metadata check; In examples check, it contains the checks for four types of example
+                                 files
 
         """
         message = ""
@@ -244,7 +245,8 @@ class SDMUtils:
             message += f"""
     However, We highly suggest you to fix with these properties:
     
-        {self.newline.join([" - " + text + self.newline + f"{' '*13}" + f"{', '.join(pps)}" for text, pps in results['Failed'].items()])}
+        {self.newline.join([" - " + text + self.newline + f"{' '*13}" + f"{', '.join(pps)}" 
+                            for text, pps in results['Failed'].items()])}
             """
         else:
             message += f"""

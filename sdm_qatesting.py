@@ -21,7 +21,7 @@
 ##
 
 from cli.command import parse_cli
-from api.server import launch
+from api.server import launch, sdm_links
 from common.config import CONFIG_DATA
 from smartdatamodels.master_tests import SDMQualityTesting
 from api.custom_logging import CustomizeLogger
@@ -52,6 +52,7 @@ if __name__ == "__main__":
     
         resp = sdm_quality_testing.do_tests()
         sdm_quality_testing.stop()
+        sdm_links.stop()
 
         print(resp)
         exit()

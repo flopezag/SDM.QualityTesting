@@ -76,7 +76,8 @@ class MDExist:
                 elif data_model_type != self.sdm_utils.extract_datamodel_from_repo_url(repo_url):
                     output["metadata"]["type"] = \
                         {"warning": f"type {data_model_type} doesn't match the data model "
-                                    f"{self.sdm_utils.extract_datamodel_from_repo_url(repo_url)}, please check it again"}
+                                    f"{self.sdm_utils.extract_datamodel_from_repo_url(repo_url)}, "
+                                    f"please check it again"}
             else:
                 output["metadata"]["type"] = \
                     {"warning": "Missing type clause, include type = '' in the header"}
@@ -158,10 +159,12 @@ class MDExist:
                 elif schema != "https://json-schema.org/draft/2020-12/schema":
                     if schema == "http://json-schema.org/schema#":
                         output["metadata"]["$schema"] = \
-                            {"warning": "$schema should be changed to \"https://json-schema.org/draft/2020-12/schema\" by default"}
+                            {"warning": "$schema should be changed to \"https://json-schema.org/draft/2020-12/schema\" "
+                                        "by default"}
                     else:
                         output["metadata"]["$schema"] = \
-                            {"warning": "$schema should be \"https://json-schema.org/draft/2020-12/schema\" by default"}
+                            {"warning": "$schema should be \"https://json-schema.org/draft/2020-12/schema\" "
+                                        "by default"}
             else:
                 output["metadata"]["$schema"] = \
                     {"warning": "Missing $schema clause, include $schema = '' in the header"}
@@ -307,7 +310,8 @@ class MDExist:
                         {"warning": "Too many required attributes, "
                                     "consider its reduction to less than 5 preferably just id and type"}
             else:
-                output["metadata"]["required"] = {"warning": "Missing required clause, include required = ['id', 'type']"}
+                output["metadata"]["required"] = \
+                    {"warning": "Missing required clause, include required = ['id', 'type']"}
         except Exception as e:
             print(e)
             output["metadata"]["required"] = \

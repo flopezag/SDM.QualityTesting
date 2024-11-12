@@ -24,7 +24,7 @@ from requests import get
 from requests.exceptions import HTTPError, RequestException, ReadTimeout, ConnectionError
 from json.decoder import JSONDecodeError
 from os.path import join
-from threading import Thread, Condition
+from threading import Thread, Condition, Event
 from time import sleep
 from datetime import datetime, timedelta
 import logging
@@ -48,18 +48,21 @@ class SDMLinks:
         else:
             self.logger = logger
 
-        self.check_interval_minutes = 720  # 12h * 60m
+        self.check_interval_minutes = 1
         self.obtained_time = datetime.now()
 
         # Create a Condition object
         self.data_available = Condition()
 
-        # Start the background thread
-        background_thread = Thread(target=self.get_files_background)
-        background_thread.start()
+        # Create a stop event
+        self.__kill = Event()
 
-    def get_files_background(self):
-        while True:
+        # Start the background thread
+        self.background_thread = Thread(target=self.get_files_background, args=(self.__kill,))
+        self.background_thread.start()
+
+    def get_files_background(self, event: Event = None):
+        while not event.is_set():
             current_time = datetime.now()
 
             if len(self.data_models_metadata_data) == 0 or (current_time - self.obtained_time) > timedelta(days=7):
@@ -138,6 +141,20 @@ class SDMLinks:
         }
 
         return response
+
+    def stop(self):
+        """
+        Send the message to stop the thread
+        """
+
+        # Signal the thread to stop
+        self.__kill.set()
+
+        # Wait for the thread to finish
+        self.background_thread.join()
+        self.background_thread.join()
+
+        self.logger.debug("SDMLinks::Thread has been stopped.")
 
 
 if __name__ == '__main__':

@@ -174,8 +174,6 @@ class CheckSchema:
 
         results = dict()
         results = {key: dict() if key == 'Failed' else list() for key in self.sdm_utils.get_check_property_cases()}
-        # results = {key: [] for key in CHECKED_PROPERTY_CASES}
-        # results['Failed'] = dict()
 
         for pp, value in documentation_status_of_properties.items():
             if value['documented'] & value['x-ngsi']:
@@ -200,21 +198,13 @@ class CheckSchema:
                     results['Failed'][value['duplicated_prop_text']] = []
                     results['Failed'][value['duplicated_prop_text']].append(pp)
 
-        # for pp in already_used_properties:
-        #    # print(pp.keys())
-        #    results['already used'].append(list(pp.keys())[0])
-        # aux = [list(x.keys())[0] for x in already_used_properties]
-        # aux = [x for x in aux if x != 'Error']
         results['already used'] = [list(x.keys())[0] for x in already_used_properties if "Error" not in x.keys()]
-
-        # for pp in available_properties:
-        #     results['newly available'].append(list(pp.keys())[0])
         results['newly available'] = [list(x.keys())[0] for x in available_properties]
 
         for pp, value in metadata.items():
             results['Metadata'].append(value['warning'])
 
-        # Check the errors observed in the data
+        # Check the errors observed in the data, at the moment we do not show this data
         results['errors'] = [list(x.values())[0] for x in already_used_properties if "Error" in x.keys()]
 
         return results
