@@ -1,9 +1,32 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+##
+# Copyright 2024 FIWARE Foundation, e.V.
+#
+# This file is part of SDM Quality Testing
+#
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+##
+
 from json import load, dump, loads, JSONDecodeError
 from jsonref import loads as jsonref_loads
 from re import sub, match
 from requests import get
 from datetime import datetime, timezone, time
 from yaml import safe_load
+from yaml.scanner import ScannerError
 from common.config import CONFIG_DATA
 from validator_collection import checkers
 from jsonschema import validate, SchemaError, Draft202012Validator
@@ -15,7 +38,7 @@ class SDMUtils:
         self.logger = logger
         self.generate_output_file = generate_output_file
 
-        self.propertyTypes = ["Property", "Relationship", "GeoProperty"]
+        self.propertyTypes = ["Property", "Relationship", "GeoProperty", "LanguageProperty"]
 
         self.TESTS = [
             "File Structure Check",
@@ -25,7 +48,8 @@ class SDMUtils:
 
         self.KEYWORDS_FOR_CERTAIN_CHECK = "smart-data-models"
 
-        self.CHECKED_PROPERTY_CASES = ['well documented', 'already used', 'newly available', 'Metadata', 'Failed']
+        self.CHECKED_PROPERTY_CASES = \
+            ['well documented', 'already used', 'newly available', 'errors', 'Metadata', 'Failed']
 
         self.SUFFIX = "mastercheck"
 
@@ -203,10 +227,17 @@ class SDMUtils:
         message = ""
         for key in self.CHECKED_PROPERTY_CASES[:-2]:
             if len(results[key]) != 0:
-                msg = f"""
-    These properties are {key} properties: 
-        {self.newline + f"{' '*9}" + ", ".join(results[key])}
-    """
+                if key == 'errors':
+                    formatted_strings = [f"{' ' * 9}{x}" for x in results[key]]
+                    msg = f"""
+        These properties have some identified problems: 
+            {self.newline + "\n".join(formatted_strings)}
+        """
+                else:
+                    msg = f"""
+        These properties are {key} properties: 
+            {self.newline + f"{' '*9}" + ", ".join(results[key])}
+        """
                 message += msg
 
         if len(results[self.CHECKED_PROPERTY_CASES[-1]]) != 0:
@@ -1652,11 +1683,11 @@ class SDMUtils:
                                        is_param_check=True)
             return False, output, dict()
 
-        # url is actually a json
+        # url is actually a yaml
         try:
             yaml_dict = safe_load(exists_yaml[1])
         except ValueError:
-            output["cause"] = f"{tag} " + yaml_url + " is not a valid json"
+            output["cause"] = f"{tag} " + yaml_url + " is not a valid yaml"
             output["time"] = str(datetime.now(tz=tz))
             output["parameters"] = {"schemaUrl": yaml_url, "mail": mail, "test": test}
             self.customized_json_dumps(output=output,
@@ -1666,6 +1697,19 @@ class SDMUtils:
                                        mail=mail,
                                        flag=False,
                                        is_param_check=True)
+            return False, output, dict()
+        except ScannerError as error:
+            output["cause"] = f"{tag} " + yaml_url + f" , scanner error: {error}"
+            output["time"] = str(datetime.now(tz=tz))
+            output["parameters"] = {"schemaUrl": yaml_url, "mail": mail, "test": test}
+            self.customized_json_dumps(output=output,
+                                       tz=tz,
+                                       test_number=int(test),
+                                       json_output_filepath=json_output_filepath,
+                                       mail=mail,
+                                       flag=False,
+                                       is_param_check=True)
+            print(output)
             return False, output, dict()
 
         return True, output, yaml_dict

@@ -22,7 +22,18 @@
 
 from cli.command import parse_cli
 from api.server import launch
-from common.config import CODE_HOME
+from common.config import CONFIG_DATA
+from smartdatamodels.master_tests import SDMQualityTesting
+from api.custom_logging import CustomizeLogger
+from common.utils import extract_json_data
+from sys import exit
+
+
+def create_logger():
+    customize_logger = CustomizeLogger.make_logger(config_data=CONFIG_DATA)
+
+    return customize_logger
+
 
 if __name__ == "__main__":
     args = parse_cli()
@@ -30,17 +41,20 @@ if __name__ == "__main__":
     if args["run"] is True:
         file_in = args["--input"]
         generate_files = args["--output"]
+        logger = create_logger()
 
-        # my_parser = Parser()
-        #
-        # try:
-        #     my_parser.parsing(content=file_in, out=generate_files)
-        # except UnexpectedToken as e:
-        #     print(e)
-        # except UnexpectedInput as e:
-        #     print(e)
-        # except UnexpectedEOF as e:
-        #     print(e)
+        data_model, email, tests = extract_json_data(filename=file_in, logger=logger)
+        
+        sdm_quality_testing = SDMQualityTesting(data_model_repo_url=data_model,
+                                                mail=email,
+                                                last_test_number=tests,
+                                                logger=logger)
+    
+        resp = sdm_quality_testing.do_tests()
+        sdm_quality_testing.stop()
+
+        print(resp)
+        exit()
 
     elif args["server"] is True:
         port = int(args["--port"])

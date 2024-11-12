@@ -1,3 +1,25 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+##
+# Copyright 2024 FIWARE Foundation, e.V.
+#
+# This file is part of SDM Quality Testing
+#
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+##
+
 # FL stands for inside file check for one data model
 # this python file is focused on schema.json file
 
@@ -23,6 +45,9 @@ class CheckSchema:
         self.mail = mail
         self.json_output_filepath = json_output_filepath
         self.generate_output_file = generate_output_file
+
+    def stop(self):
+        self.sdm_properties.stop()
 
     def check_fl_schema_json(self, test_number, tz) -> [bool, dict]:
         """
@@ -175,20 +200,21 @@ class CheckSchema:
                     results['Failed'][value['duplicated_prop_text']] = []
                     results['Failed'][value['duplicated_prop_text']].append(pp)
 
-        for pp in already_used_properties:
-            # print(pp.keys())
-            results['already used'].append(list(pp.keys())[0])
+        # for pp in already_used_properties:
+        #    # print(pp.keys())
+        #    results['already used'].append(list(pp.keys())[0])
+        # aux = [list(x.keys())[0] for x in already_used_properties]
+        # aux = [x for x in aux if x != 'Error']
+        results['already used'] = [list(x.keys())[0] for x in already_used_properties if "Error" not in x.keys()]
 
-        for pp in available_properties:
-            results['newly available'].append(list(pp.keys())[0])
+        # for pp in available_properties:
+        #     results['newly available'].append(list(pp.keys())[0])
+        results['newly available'] = [list(x.keys())[0] for x in available_properties]
 
         for pp, value in metadata.items():
             results['Metadata'].append(value['warning'])
 
+        # Check the errors observed in the data
+        results['errors'] = [list(x.values())[0] for x in already_used_properties if "Error" in x.keys()]
+
         return results
-
-
-
-
-
-

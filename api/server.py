@@ -66,7 +66,7 @@ async def set_secure_headers(request, call_next):
     response = await call_next(request)
     server = Server().set("Secure")
 
-    csp = (
+    content_security_policy = (
         ContentSecurityPolicy()
         .default_src("'none'")
         .base_uri("'self'")
@@ -75,24 +75,27 @@ async def set_secure_headers(request, call_next):
         .img_src("'self'", "static.spam.com")
     )
 
+    permission_policy = (
+        PermissionsPolicy()
+        .geolocation("'self'")
+    )
+
     hsts = StrictTransportSecurity().include_subdomains().preload().max_age(2592000)
 
     referrer = ReferrerPolicy().no_referrer()
-
-    permissions_value = PermissionsPolicy().geolocation("self", "'spam.com'").vibrate()
 
     cache_value = CacheControl().must_revalidate()
 
     secure_headers = Secure(
         server=server,
-        csp=csp,
+        csp=content_security_policy,
         hsts=hsts,
         referrer=referrer,
-        permissions=permissions_value,
+        permissions=permission_policy,
         cache=cache_value,
     )
 
-    secure_headers.framework.fastapi(response)
+    await secure_headers.set_headers_async(response)
 
     return response
 

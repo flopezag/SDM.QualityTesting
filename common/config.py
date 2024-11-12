@@ -27,7 +27,7 @@ from jsonref import loads
 
 __author__ = 'Fernando López'
 
-__version__ = '1.2.0'
+__version__ = '1.3.0'
 
 config_path = Path.cwd().joinpath('common/config.json')
 

@@ -1,11 +1,32 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+##
+# Copyright 2024 FIWARE Foundation, e.V.
+#
+# This file is part of SDM Quality Testing
+#
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+##
+
 # property check - PC
-# from smartdatamodels.utils import extract_datamodel_from_repo_url
 from smartdatamodels.utils import SDMUtils
 
 
 class SDMWellDocumented:
     def __init__(self, logger, generate_output_file: bool = False):
-        self.propertyTypes = ["Property", "Relationship", "GeoProperty"]
+        self.propertyTypes = ["Property", "Relationship", "GeoProperty", "LanguageProperty"]
         self.incompleteDescription = "Incomplete description"
         self.withoutDescription = "No description at all"
         # doubleDotsDescription = "Double dots in the middle"
@@ -31,13 +52,14 @@ class SDMWellDocumented:
                 if prop == "id":
                     continue
 
-                if isinstance(yaml_dict[prop], list) and len(yaml_dict[prop]) > 1 and isinstance(yaml_dict[prop][0], dict):
+                if (isinstance(yaml_dict[prop], list) and len(yaml_dict[prop]) > 1 and
+                        isinstance(yaml_dict[prop][0], dict)):
                     for item in yaml_dict[prop]:
                         partial_output = self.parse_yaml_dict(item, data_model_repo_url, level + 1)
                         output = dict(output, **partial_output)
 
                 if isinstance(yaml_dict[prop], dict):
-                    if prop in ["properties", "allOf", "oneOf", "anyOf", "items"]:
+                    if prop in ["properties", "allOf", "oneOf", "anyOf", "items", "languageMap"]:
                         partial_output = self.parse_yaml_dict(yaml_dict[prop], data_model_repo_url, level + 1)
                         output = dict(output, **partial_output)
                         continue

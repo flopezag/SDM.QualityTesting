@@ -1,3 +1,25 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+##
+# Copyright 2024 FIWARE Foundation, e.V.
+#
+# This file is part of SDM Quality Testing
+#
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+##
+
 # Check whether the metadata is properly reported in schema.json
 
 from validator_collection import checkers
@@ -14,23 +36,23 @@ class MDReported:
         try:
             metadata = "metadata"
             output[metadata] = {}
-            if "derived_from" in schema_dict:
+            if "derivedFrom" in schema_dict:
                 derived_from = schema_dict["derivedFrom"]
                 if derived_from != "":
                     # check that it is a valid url
                     if not checkers.is_url(derived_from):
-                        output["metadata"]["derivedFrom"] = {"warning": "derived_from is not a valid url"}
+                        output["metadata"]["derivedFrom"] = {"warning": "derivedFrom is not a valid url"}
                     else:
                         if not self.sdm_utils.is_url_existed(derived_from)[0]:
-                            output["metadata"]["derivedFrom"] = {"warning": "derived_from url is not reachable"}
+                            output["metadata"]["derivedFrom"] = {"warning": "derivedFrom url is not reachable"}
             else:
                 output["metadata"]["derivedFrom"] = \
-                    {"warning": "not derived_from clause, include derived_from = '' in the header"}
+                    {"warning": "not derivedFrom clause, include derived_from = '' in the header"}
         except Exception as e:
             print(e)
             output["metadata"]["derivedFrom"] = \
-                {"warning": "not possible to check derived_from clause, "
-                            "Does it exist a derived_from = '' clause in the header?"}
+                {"warning": "not possible to check derivedFrom clause, "
+                            "Does it exist a derivedFrom = '' clause in the header?"}
 
         # check that the header license is properly reported
         try:

@@ -1,3 +1,25 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+##
+# Copyright 2024 FIWARE Foundation, e.V.
+#
+# This file is part of SDM Quality Testing
+#
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+##
+
 # input the root of the data model
 # browse directories for .py files
 # loading in the masters and execute as a single file
@@ -49,11 +71,13 @@ class SDMQualityTesting:
             self.sdm_utils.create_output_json(self.test_number, data_model_repo_url, mail, self.tz, meta_schema)
         )
 
-        check_fl_schema_json = CheckSchema(logger=logger,
-                                           data_model_repo_url=data_model_repo_url,
-                                           mail=mail,
-                                           json_output_filepath=self.json_output_filepath,
-                                           generate_output_file=self.generate_output_file).check_fl_schema_json
+        self.checkSchema = CheckSchema(logger=logger,
+                                       data_model_repo_url=data_model_repo_url,
+                                       mail=mail,
+                                       json_output_filepath=self.json_output_filepath,
+                                       generate_output_file=self.generate_output_file)
+
+        check_fl_schema_json = self.checkSchema.check_fl_schema_json
 
         check_file_structure = CheckStructure(logger=logger,
                                               data_model_repo_url=data_model_repo_url,
@@ -193,3 +217,9 @@ class SDMQualityTesting:
                                         check_type=message)
 
         return self.output
+
+    def stop(self):
+        """
+        Send the message to stop the thread
+        """
+        self.checkSchema.stop()

@@ -1,3 +1,25 @@
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+##
+# Copyright 2024 FIWARE Foundation, e.V.
+#
+# This file is part of SDM Quality Testing
+#
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+##
+
 # Check whether the properties are existent in the database already
 
 # TODO: import the function from python package by "from pysmartdatamodel.utils import *"
@@ -5,7 +27,7 @@
 from os.path import exists, getmtime, join
 from gzip import open, GzipFile, decompress
 from datetime import datetime, timedelta
-from threading import Thread, Condition
+from threading import Thread, Condition, Event
 from time import sleep, time
 from requests import get
 from common.config import CODE_HOME
@@ -21,17 +43,20 @@ class SDMProperties:
         self.gz_save_path = join(CODE_HOME, "mastercheck_output", "smartdatamodels.gz")
         self.json_save_path = join(CODE_HOME, "mastercheck_output", "smartdatamodels.json")
 
-        self.check_interval_minutes = 30
+        self.check_interval_minutes = 1
 
         # Create a Condition object
         self.data_available = Condition()
 
+        # Create a stop event
+        self._kill = Event()
+
         # Start the background thread
-        background_thread = Thread(target=self.check_file_background)
-        background_thread.start()
+        self.background_thread = Thread(target=self.check_file_background)
+        self.background_thread.start()
 
     def check_file_background(self):
-        while True:
+        while not self._kill.is_set():
             if exists(self.gz_save_path):
                 modified_time = datetime.fromtimestamp(getmtime(self.gz_save_path))
                 current_time = datetime.now()
@@ -127,7 +152,7 @@ class SDMProperties:
                     output["availableProperties"].append({item: "Available"})
                     continue
 
-                data_models_list.append([f"{index + 1}.-{x['dataModel']}" for x in aux])
+                data_models_list.append([f"{index + 1}.- {x['dataModel']}" for x in aux])
 
                 descriptions.append(
                     [f"{index + 1}.-{get_value(x, 'description', 'missing description')}"
@@ -156,9 +181,12 @@ class SDMProperties:
                         {"Error": f"Same property '{item}' with different types provided: "
                                   f"{properties_problem_type}."})
 
-                message = (f"Already used in data models: '{', '.join(data_models_list[index])}' "
-                           f"with these definitions: '{chr(13).join(descriptions[index])}' "
-                           f"and these data types: '{', '.join(types[index])}'")
+                # message = (f"Already used in data models: '{', '.join(data_models_list[index])}' "
+                #           f"with these definitions: '{chr(13).join(descriptions[index])}' "
+                #           f"and these data types: '{', '.join(types[index])}'")
+                message = (f"Already used in data models: '{', '.join(data_models_list[0])}' "
+                           f"with these definitions: '{chr(13).join(descriptions[0])}' "
+                           f"and these data types: '{', '.join(types[0])}'")
 
                 output["alreadyUsedProperties"].append({item: message})
 
@@ -167,3 +195,17 @@ class SDMProperties:
             output["alreadyUsedProperties"].append({"Error": "Unknown key"})
 
         return output
+
+    def stop(self):
+        """
+        Send the message to stop the thread
+        """
+
+        # Signal the thread to stop
+        self._kill.set()
+
+        # Wait for the thread to finish
+        self.background_thread.join()
+        self.background_thread.join()
+
+        self.logger.debug("Thread has been stopped.")

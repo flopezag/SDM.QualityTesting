@@ -32,7 +32,7 @@ Execute the following command in the terminal:
     Since this project has a virtual environment managed by Poetry, it can be activated using the following command:
 
     ```shell
-    poetry env use 3.11
+    poetry env use 3.12
     poetry shell
     ```
 
