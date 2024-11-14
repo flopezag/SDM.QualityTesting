@@ -104,12 +104,14 @@ class CheckExamples:
                 # check id, type, @context
                 cf_output = self.md_exist.is_metadata_existed_examples(cf_output,
                                                                        example_dict,
-                                                                       self.data_model_repo_url)
+                                                                       self.data_model_repo_url,
+                                                                       checklist=["id", "type", "@context"])
             else:
                 # check id, type
                 cf_output = self.md_exist.is_metadata_existed_examples(cf_output,
                                                                        example_dict,
-                                                                       self.data_model_repo_url)
+                                                                       self.data_model_repo_url,
+                                                                       checklist=["id", "type"])
 
             output[checking_file] = cf_output
 

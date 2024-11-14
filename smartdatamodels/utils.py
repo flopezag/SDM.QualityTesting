@@ -230,16 +230,17 @@ class SDMUtils:
             if len(results[key]) != 0:
                 if key == 'errors':
                     formatted_strings = [f"{' ' * 9}{x}" for x in results[key]]
-                    msg = f"""
-        These properties have some identified problems: 
-            {self.newline + "\n".join(formatted_strings)}
-        """
+    #                msg = f"""
+    #    These properties have some identified problems:
+    #        {self.newline + self.newline.join(formatted_strings)}
+    #    """
+    #            message += msg
                 else:
                     msg = f"""
         These properties are {key} properties: 
             {self.newline + f"{' '*9}" + ", ".join(results[key])}
         """
-                message += msg
+                    message += msg
 
         if len(results[self.CHECKED_PROPERTY_CASES[-1]]) != 0:
             message += f"""
@@ -1290,7 +1291,9 @@ class SDMUtils:
                     if "type" not in item.keys():
                         props.append(prop)
 
-                    if ("value" not in item.keys()) and ("object" not in item.keys()):
+                    if (("value" not in item.keys()) and
+                            ("object" not in item.keys() and
+                             ("languageMap" not in item.keys()))):
                         props.append(prop)
 
             if len(props) == 0:
@@ -1526,7 +1529,7 @@ class SDMUtils:
                     if not flag:
                         output["cause"] = (
                             f"{', '.join(props)} should be in normalized format, can be caused by missing "
-                            f"`type` or missing `value` or `object`")
+                            f"`type`,`value`, `object`, or `languageMap`")
 
                         output["time"] = str(datetime.now(tz=tz))
                         output["parameters"] = {"schemaUrl": schema_url, "mail": mail, "test": test}
