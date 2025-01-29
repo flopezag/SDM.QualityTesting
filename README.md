@@ -15,36 +15,38 @@ It offers an OpenAPI specification with two distinct paths: `/version` and `/qte
 
 This service aims to streamline the quality assessment process for data models, providing a structured and efficient means of ensuring the robustness and reliability of the models within the Smart Data Models
 
-# Poetry Initialization - Running the Project Locally 
+# Create a Python Virtual Environment 
 
-Please note that this is a **Python 3.11** project, to install it, check this [link](https://www.python.org/downloads/).
+Please note that this is a **Python 3.13** project. The installation is based on uv, an extremely fast Python package 
+and project manager, written in Rust. Please follow the [link](https://docs.astral.sh/uv/getting-started/installation/#standalone-installer) 
+to install locally.
 
-To manage the dependencies in this project and for Python package management, Poetry is used. 
-
-1. **Install Poetry:** 
-Execute the following command in the terminal: 
+1. **Activate the virtual environment:**
+    It can be activated using the following command:
 
     ```shell
-    curl -sSL https://install.python-poetry.org | python -
+    uv venv --python 3.13
     ```
 
-2. **Activate the Virtual Environment:**
-    Since this project has a virtual environment managed by Poetry, it can be activated using the following command:
+    This operation will create the corresponding `.venv` and in case that the version of python is not installed, uv 
+    will install the corresponding version of python. After that operation you can activate the virtual environment 
+    executing the command:
 
     ```shell
-    poetry env use 3.12
-    poetry shell
+    source .venv/bin/activate
     ```
 
-3. **Install Dependencies:**
-    If the project's dependencies are not installed, the following command can be used to install them based on the pyproject.toml and poetry.lock files:
+2. **Install Dependencies:**
+    If the project's dependencies are not installed, the following command can be used to install them based on the
+   [requirements.txt](requirements.txt) file:
 
     ```shell
-    poetry install
+    uv pip install -r requirements.txt
     ```
     
-4. **Deactivate and exit the virtual environment**: 
+3. **Deactivate and exit the virtual environment**: 
 Once done, make sure to exit from the virtual environment by running this command:
+
     ```shell
     deactivate
     ```
