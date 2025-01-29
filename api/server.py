@@ -22,6 +22,7 @@
 
 from fastapi import FastAPI, Request, Response, status
 from fastapi.logger import logger as fastapi_logger
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from uvicorn import run
 from datetime import datetime
 from cli.command import __version__
@@ -41,6 +42,7 @@ from common.config import CONFIG_DATA
 from smartdatamodels.master_tests import SDMQualityTesting
 from smartdatamodels.SDMLinks import SDMLinks
 from re import match
+from ssl import SSLContext, PROTOCOL_TLS_SERVER
 
 
 initial_uptime = datetime.now()
@@ -49,6 +51,7 @@ logger = getLogger(__name__)
 
 def create_app() -> FastAPI:
     app = FastAPI(title="SDM SQL Schema Generation", debug=False)
+    app.add_middleware(HTTPSRedirectMiddleware)
 
     customize_logger = CustomizeLogger.make_logger(config_data=CONFIG_DATA)
     fastapi_logger.addHandler(customize_logger)
@@ -61,7 +64,7 @@ application = create_app()
 sdm_links = SDMLinks(logger=application.logger)
 
 
-@application.middleware("http")
+@application.middleware("https")
 async def set_secure_headers(request, call_next):
     response = await call_next(request)
     server = Server().set("Secure")
@@ -78,6 +81,8 @@ async def set_secure_headers(request, call_next):
     permission_policy = (
         PermissionsPolicy()
         .geolocation("'self'")
+        .camera("'none'")
+        .microphone("'none'")
     )
 
     hsts = StrictTransportSecurity().include_subdomains().preload().max_age(2592000)
@@ -109,7 +114,7 @@ def getversion(request: Request):
         "git_hash": "nogitversion",
         "version": __version__,
         "release_date": "no released",
-        "uptime": get_uptime(),
+        "uptime": get_uptime()
     }
 
     return data
@@ -193,6 +198,10 @@ def get_url_key(url: str, logger) -> [str, str]:
 
 
 def launch(app: str = "server:application", host: str = "127.0.0.1", port: int = 5600):
+    ssl_context = SSLContext(PROTOCOL_TLS_SERVER)
+
+    ssl_context.load_cert_chain(certfile=CONFIG_DATA['certfile'], keyfile=CONFIG_DATA['keyfile'])
+
     run(
         app=app,
         host=host,
@@ -200,6 +209,8 @@ def launch(app: str = "server:application", host: str = "127.0.0.1", port: int =
         log_level="info",
         reload=True,
         server_header=False,
+        ssl_certfile=CONFIG_DATA['certfile'],
+        ssl_keyfile=CONFIG_DATA['keyfile']
     )
 
 
