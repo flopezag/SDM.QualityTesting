@@ -75,7 +75,10 @@ Options:
 
   -H, --help          show this help message and exit
   -v, --version       show version and exit
-  ``````
+```
+
+To run the service, it is needed to define the corresponding full path to the cert and key files in the 
+[./common/config.json] file.
 
 # OpenAPI documentation
 
@@ -99,4 +102,4 @@ This specification defines two paths: `/version` and `/qtest`:
 - the API logs relevant information, such as the request for quality testing and any potential errors, using the provided logger. 
 
 # License
-These scripts are licensed under Apache License 2.0.
+These scripts are licensed under [Apache License 2.0](LICENSE).
