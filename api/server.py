@@ -139,8 +139,10 @@ async def qtest(request: Request, response: Response):
         response.status_code = status.HTTP_400_BAD_REQUEST
         return resp
 
-    # url can be a complete url to the repository or an Entity Name,
-    found, data = get_url_key(url=req_info["data_model"], logger=request.app.logger)
+    # url can be a complete url to the repository
+    #found, data = get_url_key(url=req_info["data_model"], logger=request.app.logger)
+    default_dm = "https://github.com/smart-data-models/dataModel.WaterQuality/tree/master/WaterQualityObserved"
+    found, data = get_url_key(url=req_info.get("data_model", default_dm), logger=request.app.logger)
     email = req_info["email"]
     tests = req_info["tests"]
 
